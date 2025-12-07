@@ -39,6 +39,9 @@ export default function GameControls({
         {!canStartGame && (
           <p className="waiting-message">Waiting for players to join...</p>
         )}
+        {!isRoomCreator && canStartGame && (
+          <p className="waiting-message">Waiting for host to start game</p>
+        )}
       </div>
     );
   }

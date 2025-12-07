@@ -56,19 +56,111 @@
   text-transform: uppercase;
 }
 
-.lobby-forms {
+.lobby-actions {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
+  align-items: center;
+}
+
+.lobby-action-btn {
+  padding: 18px 48px;
+  background: 
+    linear-gradient(135deg, #2c1810 0%, #1a0f08 100%);
+  color: #f5e6d3;
+  border: 3px solid #8b6f47;
+  border-style: double;
+  border-radius: 4px;
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-family: 'Crimson Text', serif;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  min-width: 240px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.lobby-action-btn:hover {
+  background: linear-gradient(135deg, #1a0f08 0%, #0f0804 100%);
+  transform: translateY(-3px);
+  box-shadow: 
+    0 6px 12px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border-color: #a67c52;
+}
+
+.lobby-action-btn:active {
+  transform: translateY(-1px);
+}
+
+.lobby-form-wrapper {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lobby-form-section {
+  width: 100%;
+}
+
+.lobby-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }
 
 .lobby-form-section h2 {
   color: #5d4037;
-  margin-bottom: 20px;
+  margin: 0;
   font-size: 22px;
   font-weight: 600;
   font-family: 'Playfair Display', serif;
   text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.5);
+}
+
+.lobby-back-btn {
+  padding: 8px 16px;
+  background: transparent;
+  color: #5d4037;
+  border: 2px solid #8b6f47;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Crimson Text', serif;
+  text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.5);
+}
+
+.lobby-back-btn:hover {
+  background: rgba(139, 111, 71, 0.1);
+  border-color: #a67c52;
+  transform: translateX(-2px);
+}
+
+.lobby-back-btn:active {
+  transform: translateX(0);
+}
+
+.lobby-forms {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
 }
 
 .lobby-form-section form {
