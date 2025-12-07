@@ -74,8 +74,23 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
 
   useEffect(() => {
+    // Determine server URL based on current hostname
+    const getServerUrl = () => {
+      // Use environment variable if set
+      if (import.meta.env.VITE_SERVER_URL) {
+        return import.meta.env.VITE_SERVER_URL;
+      }
+      
+      // Check if running on localhost
+      const hostname = window.location.hostname;
+      const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '';
+      
+      // Use production server if not localhost
+      return isLocalhost ? 'http://localhost:3001' : 'https://kits-ludo-server.vercel.app';
+    };
+
     // Initialize socket connection
-    const socket = io(import.meta.env.VITE_SERVER_URL || 'http://localhost:3001', {
+    const socket = io(getServerUrl(), {
       transports: ['websocket', 'polling']
     });
 
