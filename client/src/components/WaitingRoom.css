@@ -1,0 +1,109 @@
+.waiting-room {
+  background: 
+    linear-gradient(135deg, #f5e6d3 0%, #e8d4b8 100%),
+    url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='1'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.1'/%3E%3C/svg%3E");
+  padding: 40px;
+  border-radius: 4px;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  border: 4px solid #8b6f47;
+  border-style: double;
+  position: relative;
+}
+
+.waiting-room::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  background: 
+    repeating-linear-gradient(
+      90deg,
+      #d4a574 0px,
+      #d4a574 8px,
+      #b8935f 8px,
+      #b8935f 16px
+    );
+  border-radius: 4px;
+  z-index: -1;
+}
+
+.waiting-room h2 {
+  text-align: center;
+  color: #8b4513;
+  margin-bottom: 24px;
+  font-size: 28px;
+  font-weight: 700;
+  font-family: 'Playfair Display', serif;
+  text-shadow: 
+    1px 1px 0px rgba(139, 111, 71, 0.3),
+    1px 1px 0px rgba(255, 255, 255, 0.5);
+}
+
+.room-id-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.room-id-display {
+  text-align: center;
+  font-size: 18px;
+  color: #8b6f47;
+  font-weight: 500;
+  margin: 0;
+  font-family: 'Crimson Text', serif;
+}
+
+.room-id-display strong {
+  color: #5d4037;
+  font-size: 32px;
+  letter-spacing: 4px;
+  font-weight: 800;
+  font-family: 'Courier New', monospace;
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.2);
+}
+
+.copy-link-btn {
+  padding: 10px 20px;
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.copy-link-btn:hover {
+  background: #000;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.copy-link-btn:active {
+  transform: translateY(0);
+}
+
+.players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.waiting-message {
+  text-align: center;
+  color: #8b6f47;
+  font-style: italic;
+  margin-bottom: 24px;
+  font-weight: 500;
+  font-family: 'Crimson Text', serif;
+}

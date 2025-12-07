@@ -1,0 +1,28 @@
+{
+  "name": "ludo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real-time multiplayer Ludo game",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=server & npm run dev --workspace=client",
+    "dev:client": "npm run dev --workspace=client",
+    "dev:server": "npm run dev --workspace=server",
+    "build": "npm run build --workspaces",
+    "build:client": "npm run build --workspace=client",
+    "build:server": "npm run build --workspace=server",
+    "lint": "npm run lint --workspaces --if-present",
+    "start": "npm run start --workspace=server",
+    "install:all": "npm install"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "author": "",
+  "license": "MIT"
+}
+
