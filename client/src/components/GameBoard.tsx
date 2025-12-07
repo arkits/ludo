@@ -148,6 +148,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
       // Left column (col 6) - main track
       const leftX = 6 * CELL_SIZE;
       const leftY = row * CELL_SIZE;
+      const isRedStart = row === 1; // Red starts here (col 6, row 1)
       squares.push(
         <rect
           key={`top-left-${row}`}
@@ -155,11 +156,18 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           y={leftY}
           width={CELL_SIZE}
           height={CELL_SIZE}
-          fill="white"
+          fill={isRedStart ? COLORS.red.main : 'white'}
           stroke="#333"
           strokeWidth="1"
         />
       );
+      if (isRedStart) {
+        squares.push(
+          <g key={`top-left-arrow-${row}`}>
+            {renderArrow(leftX, leftY, 'right', 'white')}
+          </g>
+        );
+      }
       
       // Middle column (col 7) - Red home stretch
       if (row > 0) { // Skip row 0 (that's part of the track)
@@ -182,7 +190,6 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
       // Right column (col 8) - main track
       const rightX = 8 * CELL_SIZE;
       const rightY = row * CELL_SIZE;
-      const isGreenStart = row === 1; // Green starts here (adjacent to green home at top-right)
       squares.push(
         <rect
           key={`top-right-${row}`}
@@ -190,18 +197,11 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           y={rightY}
           width={CELL_SIZE}
           height={CELL_SIZE}
-          fill={isGreenStart ? COLORS.green.main : 'white'}
+          fill="white"
           stroke="#333"
           strokeWidth="1"
         />
       );
-      if (isGreenStart) {
-        squares.push(
-          <g key={`top-right-arrow-${row}`}>
-            {renderArrow(rightX, rightY, 'down', 'white')}
-          </g>
-        );
-      }
     }
 
     // === BOTTOM ARM (below center) ===
@@ -209,7 +209,6 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
       // Left column (col 6) - main track
       const leftX = 6 * CELL_SIZE;
       const leftY = row * CELL_SIZE;
-      const isBlueStart = row === 13; // Blue starts here (adjacent to blue home at bottom-left)
       squares.push(
         <rect
           key={`bottom-left-${row}`}
@@ -217,18 +216,11 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           y={leftY}
           width={CELL_SIZE}
           height={CELL_SIZE}
-          fill={isBlueStart ? COLORS.blue.main : 'white'}
+          fill="white"
           stroke="#333"
           strokeWidth="1"
         />
       );
-      if (isBlueStart) {
-        squares.push(
-          <g key={`bottom-left-arrow-${row}`}>
-            {renderArrow(leftX, leftY, 'up', 'white')}
-          </g>
-        );
-      }
       
       // Middle column (col 7) - Yellow home stretch
       if (row < 14) { // Skip row 14 (that's part of the track)
@@ -251,6 +243,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
       // Right column (col 8) - main track
       const rightX = 8 * CELL_SIZE;
       const rightY = row * CELL_SIZE;
+      const isYellowStart = row === 13; // Yellow starts here (col 8, row 13)
       squares.push(
         <rect
           key={`bottom-right-${row}`}
@@ -258,11 +251,18 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           y={rightY}
           width={CELL_SIZE}
           height={CELL_SIZE}
-          fill="white"
+          fill={isYellowStart ? COLORS.yellow.main : 'white'}
           stroke="#333"
           strokeWidth="1"
         />
       );
+      if (isYellowStart) {
+        squares.push(
+          <g key={`bottom-right-arrow-${row}`}>
+            {renderArrow(rightX, rightY, 'left', 'white')}
+          </g>
+        );
+      }
     }
 
     // === LEFT ARM (left of center) ===
@@ -270,7 +270,6 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
       // Top row (row 6) - main track
       const topX = col * CELL_SIZE;
       const topY = 6 * CELL_SIZE;
-      const isRedStart = col === 1;
       squares.push(
         <rect
           key={`left-top-${col}`}
@@ -278,18 +277,11 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           y={topY}
           width={CELL_SIZE}
           height={CELL_SIZE}
-          fill={isRedStart ? COLORS.red.main : 'white'}
+          fill="white"
           stroke="#333"
           strokeWidth="1"
         />
       );
-      if (isRedStart) {
-        squares.push(
-          <g key={`left-top-arrow-${col}`}>
-            {renderArrow(topX, topY, 'right', 'white')}
-          </g>
-        );
-      }
       
       // Middle row (row 7) - Blue home stretch
       if (col > 0) { // Skip col 0 (that's part of the track)
@@ -312,6 +304,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
       // Bottom row (row 8) - main track
       const bottomX = col * CELL_SIZE;
       const bottomY = 8 * CELL_SIZE;
+      const isBlueStart = col === 1; // Blue starts here (col 1, row 8)
       squares.push(
         <rect
           key={`left-bottom-${col}`}
@@ -319,11 +312,18 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           y={bottomY}
           width={CELL_SIZE}
           height={CELL_SIZE}
-          fill="white"
+          fill={isBlueStart ? COLORS.blue.main : 'white'}
           stroke="#333"
           strokeWidth="1"
         />
       );
+      if (isBlueStart) {
+        squares.push(
+          <g key={`left-bottom-arrow-${col}`}>
+            {renderArrow(bottomX, bottomY, 'up', 'white')}
+          </g>
+        );
+      }
     }
 
     // === RIGHT ARM (right of center) ===
@@ -331,6 +331,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
       // Top row (row 6) - main track
       const topX = col * CELL_SIZE;
       const topY = 6 * CELL_SIZE;
+      const isGreenStart = col === 13; // Green starts here (col 13, row 6)
       squares.push(
         <rect
           key={`right-top-${col}`}
@@ -338,11 +339,18 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           y={topY}
           width={CELL_SIZE}
           height={CELL_SIZE}
-          fill="white"
+          fill={isGreenStart ? COLORS.green.main : 'white'}
           stroke="#333"
           strokeWidth="1"
         />
       );
+      if (isGreenStart) {
+        squares.push(
+          <g key={`right-top-arrow-${col}`}>
+            {renderArrow(topX, topY, 'down', 'white')}
+          </g>
+        );
+      }
       
       // Middle row (row 7) - Green home stretch
       if (col < 14) { // Skip col 14 (that's part of the track)
@@ -365,7 +373,6 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
       // Bottom row (row 8) - main track
       const bottomX = col * CELL_SIZE;
       const bottomY = 8 * CELL_SIZE;
-      const isYellowStart = col === 13;
       squares.push(
         <rect
           key={`right-bottom-${col}`}
@@ -373,19 +380,13 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           y={bottomY}
           width={CELL_SIZE}
           height={CELL_SIZE}
-          fill={isYellowStart ? COLORS.yellow.main : 'white'}
+          fill="white"
           stroke="#333"
           strokeWidth="1"
         />
       );
-      if (isYellowStart) {
-        squares.push(
-          <g key={`right-bottom-arrow-${col}`}>
-            {renderArrow(bottomX, bottomY, 'left', 'white')}
-          </g>
-        );
-      }
     }
+    
 
     // Add safe square stars
     // Red safe (col 2, row 6)
