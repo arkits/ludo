@@ -152,10 +152,25 @@ export function GameProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (roomData) {
       const transformed = transformRoomData(roomData.room, roomData.players, playerId);
-      dispatch({ type: 'SET_ROOM', payload: transformed });
+      
+      // Check if player is already in the room (for reconnection scenarios)
+      const isPlayerInRoom = roomData.players.some((p) => p.playerId === playerId);
+      
+      // Only set room if player is already in it (they've explicitly joined before)
+      // OR if we already have a roomId set (meaning they just joined via the form)
+      if (isPlayerInRoom || state.roomId) {
+        dispatch({ type: 'SET_ROOM', payload: transformed });
+        // Set roomId if we have it from URL and player is in room
+        if (!state.roomId && roomIdFromUrl && isPlayerInRoom) {
+          dispatch({ type: 'SET_ROOM_ID', payload: roomIdFromUrl });
+        }
+      } else {
+        // Player is not in room - don't show room, let them use the Lobby form
+        dispatch({ type: 'SET_ROOM', payload: null });
+      }
 
-      // Calculate valid moves for current player
-      if (transformed && transformed.isPlayerTurn && transformed.currentPlayer && transformed.hasRolledDice) {
+      // Calculate valid moves for current player (only if player is in room)
+      if (isPlayerInRoom && transformed && transformed.isPlayerTurn && transformed.currentPlayer && transformed.hasRolledDice) {
         const validMoves = calculateValidMoves(transformed.currentPlayer, transformed.diceValue);
         dispatch({ type: 'SET_VALID_MOVES', payload: validMoves });
 
@@ -174,19 +189,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       // Room query returned null but we have a roomId - room might not exist
       dispatch({ type: 'SET_ROOM', payload: null });
     }
-  }, [roomData, playerId, currentRoomId, endTurnRef]);
-
-  // Auto-join room from URL on mount
-  useEffect(() => {
-    if (roomIdFromUrl && !state.roomId && !state.room && joinRoomRef.current) {
-      const storedNickname = localStorage.getItem('ludo_nickname');
-      const storedPassword = localStorage.getItem(`ludo_password_${roomIdFromUrl}`);
-      if (storedNickname) {
-        joinRoomRef.current(roomIdFromUrl, storedNickname, storedPassword || undefined);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run on mount
+  }, [roomData, playerId, currentRoomId, endTurnRef, roomIdFromUrl, state.roomId]);
 
   const createRoom = useCallback(async (nickname: string, password?: string) => {
     try {
