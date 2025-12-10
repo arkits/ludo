@@ -545,13 +545,9 @@ export const startGame = mutation({
       return { success: false as const, error: validation.error || "Cannot start game" };
     }
 
-    // Assign colors if not already assigned
-    const colors: PlayerColor[] = ["red", "blue", "green", "yellow"];
-    for (let i = 0; i < players.length; i++) {
-      const player = players[i];
-      const color = colors[i];
+    // Initialize tokens for all players (keep their selected colors)
+    for (const player of players) {
       await ctx.db.patch(player._id, {
-        color,
         tokens: initializeTokens(),
       });
     }
