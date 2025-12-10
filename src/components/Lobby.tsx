@@ -213,7 +213,7 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
           <div className="footer-content">
             <span className="footer-text">Made with ♥ for board game lovers</span>
             <a 
-              href="https://github.com" 
+              href="https://github.com/arkits/ludo" 
               target="_blank" 
               rel="noopener noreferrer"
               className="github-link"
