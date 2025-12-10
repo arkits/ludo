@@ -108,6 +108,24 @@
   line-height: 1;
 }
 
+.logo-clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logo-clickable:hover {
+  color: #6d3a12;
+  transform: scale(1.02);
+  text-shadow: 
+    3px 3px 0px #c99063,
+    5px 5px 0px rgba(0, 0, 0, 0.25),
+    0 0 35px rgba(139, 69, 19, 0.4);
+}
+
+.logo-clickable:active {
+  transform: scale(0.98);
+}
+
 .logo-subtitle {
   font-family: 'Crimson Text', serif;
   font-size: 16px;
@@ -417,6 +435,15 @@
 
 .submit-btn:active {
   transform: translateY(0);
+}
+
+.form-hint {
+  font-size: 13px;
+  color: #8b6f47;
+  font-style: italic;
+  text-align: center;
+  margin: 0;
+  font-family: 'Crimson Text', serif;
 }
 
 /* Footer */

@@ -127,17 +127,18 @@ const HOME_COLUMNS: Record<PlayerColor, Array<{ x: number; y: number }>> = {
 // Starting positions for each color on the main track
 export const START_POSITIONS: Record<PlayerColor, number> = {
   red: 0,
-  green: 13,
-  yellow: 26,
-  blue: 39,
+  blue: 13,
+  green: 26,
+  yellow: 39,
 };
 
-// Position where each color enters their home column
+// Position after which each color enters their home column
+// This matches the backend HOME_ENTRY values
 export const HOME_ENTRY_POSITIONS: Record<PlayerColor, number> = {
-  red: 51,   // After completing the track, enters home at position 51
-  green: 12, // After position 12, enters home
-  yellow: 25, // After position 25, enters home
-  blue: 38,  // After position 38, enters home
+  red: 51,    // Red enters home after position 51 (one before their start)
+  blue: 12,   // Blue enters home after position 12
+  green: 25,  // Green enters home after position 25
+  yellow: 38, // Yellow enters home after position 38
 };
 
 export function getSquareCoordinates(position: number, color?: PlayerColor): { x: number; y: number } {
@@ -145,13 +146,13 @@ export function getSquareCoordinates(position: number, color?: PlayerColor): { x
     return { x: 0, y: 0 }; // Invalid position
   }
 
-  // Home column positions (52-56 for each color)
-  if (position >= 52 && position <= 56 && color) {
+  // Home column positions (52-56 for each color, 57 = finished)
+  if (position >= 52 && position <= 57 && color) {
     const homeIndex = position - 52;
     if (homeIndex < HOME_COLUMNS[color].length) {
       return HOME_COLUMNS[color][homeIndex];
     }
-    // Finished - return center
+    // Position 57 is the finish (should use getFinishedPosition instead)
     return gridToPixel(7.5, 7.5);
   }
 

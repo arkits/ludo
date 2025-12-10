@@ -51,7 +51,7 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
         <div className="lobby-container">
           {/* Logo */}
           <div className="logo-section">
-            <h1 className="logo">Ludo</h1>
+            <h1 className="logo logo-clickable" onClick={() => window.location.href = '/'}>Ludo</h1>
             <div className="logo-subtitle">Classic Board Game</div>
           </div>
           
@@ -135,6 +135,9 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
                         maxLength={20}
                       />
                     </div>
+                    <p className="form-hint">
+                      You can choose your color in the waiting room after creating.
+                    </p>
                     <button type="submit" className="submit-btn">
                       Create Room
                     </button>
@@ -192,6 +195,9 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
                         maxLength={20}
                       />
                     </div>
+                    <p className="form-hint">
+                      You can choose your color in the waiting room after joining.
+                    </p>
                     <button type="submit" className="submit-btn">
                       Join Room
                     </button>

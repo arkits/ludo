@@ -8,7 +8,7 @@ import { canEndTurn } from './utils/gameLogic';
 import './App.css';
 
 function App() {
-  const { state, createRoom, joinRoom, leaveRoom, startGame, rollDice, moveToken, endTurn } = useGame();
+  const { state, createRoom, joinRoom, leaveRoom, startGame, rollDice, moveToken, endTurn, updatePlayer, addBot, removeBot } = useGame();
 
   const handleTokenClick = (playerId: string, tokenId: number) => {
     if (playerId === state.currentPlayerId && state.room?.isPlayerTurn) {
@@ -39,6 +39,15 @@ function App() {
     startGame();
   };
 
+  const handleLogoClick = () => {
+    // Leave room if in one
+    if (state.room) {
+      leaveRoom();
+    }
+    // Clear URL parameters
+    window.history.pushState({}, '', window.location.pathname);
+  };
+
   // Show lobby if not in a room
   if (!state.room) {
     return (
@@ -67,41 +76,47 @@ function App() {
       )}
 
       <div className="game-container">
-        <div className="game-header">
-          <h1 className="logo">Ludo</h1>
-          <div className="room-info">
-            <span>Room: {state.room.roomId}</span>
-            <button 
-              className="copy-link-btn-header" 
-              onClick={() => {
-                if (state.room) {
-                  const url = new URL(window.location.href);
-                  url.searchParams.set('room', state.room.roomId);
-                  navigator.clipboard.writeText(url.toString()).then(() => {
-                    const button = document.querySelector('.copy-link-btn-header') as HTMLButtonElement;
-                    if (button) {
-                      const originalText = button.textContent;
-                      button.textContent = 'Copied!';
-                      setTimeout(() => {
-                        button.textContent = originalText;
-                      }, 2000);
-                    }
-                  });
-                }
-              }}
-              title="Copy room link"
-            >
-              Copy Link
-            </button>
-            <button onClick={leaveRoom} className="leave-room-btn">Leave Room</button>
+        {state.room.gameState !== 'waiting' && (
+          <div className="game-header">
+            <h1 className="logo logo-link" onClick={handleLogoClick}>Ludo</h1>
+            <div className="room-info">
+              <span>Room: {state.room.roomId}</span>
+              <button 
+                className="copy-link-btn-header" 
+                onClick={() => {
+                  if (state.room) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('room', state.room.roomId);
+                    navigator.clipboard.writeText(url.toString()).then(() => {
+                      const button = document.querySelector('.copy-link-btn-header') as HTMLButtonElement;
+                      if (button) {
+                        const originalText = button.textContent;
+                        button.textContent = 'Copied!';
+                        setTimeout(() => {
+                          button.textContent = originalText;
+                        }, 2000);
+                      }
+                    });
+                  }
+                }}
+                title="Copy room link"
+              >
+                Copy Link
+              </button>
+              <button onClick={leaveRoom} className="leave-room-btn">Leave Room</button>
+            </div>
           </div>
-        </div>
+        )}
 
         {state.room.gameState === 'waiting' && (
           <WaitingRoom
             room={state.room}
             currentPlayerId={state.currentPlayerId}
             onStartGame={handleStartGame}
+            onUpdatePlayer={updatePlayer}
+            onLeaveRoom={leaveRoom}
+            onAddBot={addBot}
+            onRemoveBot={removeBot}
           />
         )}
 

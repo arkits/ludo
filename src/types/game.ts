@@ -15,6 +15,7 @@ export interface Player {
   color: PlayerColor;
   tokens: Token[];
   isReady: boolean;
+  isBot: boolean;
 }
 
 export interface GameRoom {

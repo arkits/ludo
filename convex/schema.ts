@@ -10,12 +10,14 @@ export default defineSchema({
     currentPlayerIndex: v.number(),
     diceValue: v.number(),
     hasRolledDice: v.boolean(),
+    consecutiveSixes: v.optional(v.number()), // Track consecutive 6s - turn ends after 3 (defaults to 0)
     lastMove: v.union(
       v.object({
         playerId: v.string(),
         tokenId: v.number(),
         fromPosition: v.number(),
         toPosition: v.number(),
+        captured: v.boolean(), // Track if a capture occurred
       }),
       v.null()
     ),
@@ -39,6 +41,7 @@ export default defineSchema({
     ),
     isReady: v.boolean(),
     playerIndex: v.number(), // Order in which player joined (0 = creator)
+    isBot: v.optional(v.boolean()), // Whether this player is a bot (defaults to false)
   })
     .index("by_roomId", ["roomId"])
     .index("by_roomId_and_playerId", ["roomId", "playerId"]),

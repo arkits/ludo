@@ -43,6 +43,9 @@ interface GameContextType {
   rollDice: () => Promise<void>;
   moveToken: (tokenId: number) => Promise<void>;
   endTurn: () => Promise<void>;
+  updatePlayer: (nickname?: string, color?: 'red' | 'blue' | 'green' | 'yellow') => Promise<void>;
+  addBot: () => Promise<void>;
+  removeBot: (botPlayerId: string) => Promise<void>;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -91,6 +94,7 @@ function transformRoomData(
     color: p.color,
     tokens: p.tokens,
     isReady: p.isReady,
+    isBot: p.isBot ?? false,
   }));
 
   const currentPlayer = transformedPlayers[roomData.currentPlayerIndex] || null;
@@ -135,6 +139,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const joinRoomMutation = useMutation(api.rooms.joinRoom);
   const leaveRoomMutation = useMutation(api.rooms.leaveRoom);
   const startGameMutation = useMutation(api.rooms.startGame);
+  const updatePlayerMutation = useMutation(api.rooms.updatePlayer);
+  const addBotMutation = useMutation(api.rooms.addBot);
+  const removeBotMutation = useMutation(api.rooms.removeBot);
   const rollDiceMutation = useMutation(api.game.rollDiceMutation);
   const moveTokenMutation = useMutation(api.game.moveTokenMutation);
   const endTurnMutation = useMutation(api.game.endTurn);
@@ -408,6 +415,86 @@ export function GameProvider({ children }: { children: ReactNode }) {
     endTurnRef.current = endTurn;
   }, [endTurn]);
 
+  const updatePlayer = useCallback(async (nickname?: string, color?: 'red' | 'blue' | 'green' | 'yellow') => {
+    if (!state.roomId) return;
+
+    try {
+      const result = await updatePlayerMutation({
+        roomId: state.roomId,
+        playerId,
+        nickname,
+        color,
+      });
+
+      if (!result.success) {
+        dispatch({ type: 'SET_ERROR', payload: result.error });
+        setTimeout(() => {
+          dispatch({ type: 'SET_ERROR', payload: null });
+        }, 5000);
+      } else {
+        // Update localStorage if nickname changed
+        if (nickname) {
+          localStorage.setItem('ludo_nickname', nickname);
+        }
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      dispatch({ type: 'SET_ERROR', payload: errorMessage || 'Failed to update player' });
+      setTimeout(() => {
+        dispatch({ type: 'SET_ERROR', payload: null });
+      }, 5000);
+    }
+  }, [updatePlayerMutation, state.roomId, playerId]);
+
+  const addBot = useCallback(async () => {
+    if (!state.roomId) return;
+
+    try {
+      const result = await addBotMutation({
+        roomId: state.roomId,
+        playerId,
+      });
+
+      if (!result.success) {
+        dispatch({ type: 'SET_ERROR', payload: result.error });
+        setTimeout(() => {
+          dispatch({ type: 'SET_ERROR', payload: null });
+        }, 5000);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      dispatch({ type: 'SET_ERROR', payload: errorMessage || 'Failed to add bot' });
+      setTimeout(() => {
+        dispatch({ type: 'SET_ERROR', payload: null });
+      }, 5000);
+    }
+  }, [addBotMutation, state.roomId, playerId]);
+
+  const removeBot = useCallback(async (botPlayerId: string) => {
+    if (!state.roomId) return;
+
+    try {
+      const result = await removeBotMutation({
+        roomId: state.roomId,
+        playerId,
+        botPlayerId,
+      });
+
+      if (!result.success) {
+        dispatch({ type: 'SET_ERROR', payload: result.error });
+        setTimeout(() => {
+          dispatch({ type: 'SET_ERROR', payload: null });
+        }, 5000);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      dispatch({ type: 'SET_ERROR', payload: errorMessage || 'Failed to remove bot' });
+      setTimeout(() => {
+        dispatch({ type: 'SET_ERROR', payload: null });
+      }, 5000);
+    }
+  }, [removeBotMutation, state.roomId, playerId]);
+
   return (
     <GameContext.Provider
       value={{
@@ -419,6 +506,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         rollDice,
         moveToken,
         endTurn,
+        updatePlayer,
+        addBot,
+        removeBot,
       }}
     >
       {children}

@@ -119,6 +119,23 @@
   letter-spacing: 4px;
 }
 
+.logo-link {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logo-link:hover {
+  color: #6d3a12;
+  transform: scale(1.02);
+  text-shadow: 
+    2px 2px 0px #c99063,
+    3px 3px 0px rgba(0, 0, 0, 0.2);
+}
+
+.logo-link:active {
+  transform: scale(0.98);
+}
+
 .room-info {
   display: flex;
   align-items: center;

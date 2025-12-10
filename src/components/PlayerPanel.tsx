@@ -18,6 +18,7 @@ export default function PlayerPanel({ player, isCurrentTurn, isYou }: PlayerPane
         <span className="player-name">
           {player.nickname}
           {isYou && <span className="you-badge">You</span>}
+          {player.isBot && <span className="bot-badge">Bot</span>}
         </span>
         {isCurrentTurn && <span className="turn-indicator">●</span>}
       </div>

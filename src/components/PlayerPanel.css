@@ -85,6 +85,21 @@
   font-family: 'Crimson Text', serif;
 }
 
+.bot-badge {
+  background: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  margin-left: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: 1px solid #4f46e5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  font-family: 'Crimson Text', serif;
+}
+
 .turn-indicator {
   color: #d4a574;
   font-size: 22px;

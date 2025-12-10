@@ -74,6 +74,7 @@ export function canMoveToken(
     tokens: currentPlayer.tokens,
     isReady: currentPlayer.isReady,
     playerIndex: currentPlayer.playerIndex,
+    isBot: currentPlayer.isBot ?? false,
   };
 
   const allPlayers: Player[] = players.map((p) => ({
@@ -83,6 +84,7 @@ export function canMoveToken(
     tokens: p.tokens,
     isReady: p.isReady,
     playerIndex: p.playerIndex,
+    isBot: p.isBot ?? false,
   }));
 
   const validMoves = getValidMoves(allPlayers, player, diceValue);
@@ -123,6 +125,7 @@ export function canEndTurn(
       tokens: currentPlayer.tokens,
       isReady: currentPlayer.isReady,
       playerIndex: currentPlayer.playerIndex,
+      isBot: currentPlayer.isBot ?? false,
     };
 
     const allPlayers: Player[] = players.map((p) => ({
@@ -132,6 +135,7 @@ export function canEndTurn(
       tokens: p.tokens,
       isReady: p.isReady,
       playerIndex: p.playerIndex,
+      isBot: p.isBot ?? false,
     }));
 
     const validMoves = getValidMoves(allPlayers, player, room.diceValue);
