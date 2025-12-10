@@ -18,6 +18,17 @@ export interface Player {
   isBot: boolean;
 }
 
+export interface MoveHistoryEntry {
+  playerId: string;
+  playerNickname: string;
+  playerColor: PlayerColor;
+  tokenId: number;
+  fromPosition: number;
+  toPosition: number;
+  captured: boolean;
+  timestamp: number;
+}
+
 export interface GameRoom {
   roomId: string;
   maxPlayers: number;
@@ -32,6 +43,7 @@ export interface GameRoom {
     fromPosition: number;
     toPosition: number;
   } | null;
+  moveHistory: MoveHistoryEntry[];
   winner: Player | null;
   isPlayerTurn: boolean;
   currentPlayer: Player | null;

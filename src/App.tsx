@@ -4,6 +4,7 @@ import GameBoard from './components/GameBoard';
 import PlayerPanel from './components/PlayerPanel';
 import GameControls from './components/GameControls';
 import WaitingRoom from './components/WaitingRoom';
+import MoveHistory from './components/MoveHistory';
 import { canEndTurn } from './utils/gameLogic';
 import './App.css';
 
@@ -135,6 +136,7 @@ function App() {
                   />
                 ))}
               </div>
+              <MoveHistory history={state.room.moveHistory} />
             </div>
 
             <div className="game-main">

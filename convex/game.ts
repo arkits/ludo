@@ -184,11 +184,23 @@ export const moveTokenMutation = mutation({
       }
     }
 
-    // Store last move
+    // Store last move and add to history
     const movedPlayer = result.updatedPlayers.find((p) => p.playerId === args.playerId);
     if (movedPlayer) {
       const token = movedPlayer.tokens[args.tokenId];
       if (token) {
+        const moveEntry = {
+          playerId: args.playerId,
+          playerNickname: currentPlayer.nickname,
+          playerColor: currentPlayer.color,
+          tokenId: args.tokenId,
+          fromPosition: currentPlayer.tokens[args.tokenId]?.position ?? -1,
+          toPosition: token.position,
+          captured: result.captured,
+          timestamp: Date.now(),
+        };
+        
+        const currentHistory = room.moveHistory ?? [];
         await ctx.db.patch(room._id, {
           lastMove: {
             playerId: args.playerId,
@@ -197,6 +209,7 @@ export const moveTokenMutation = mutation({
             toPosition: token.position,
             captured: result.captured,
           },
+          moveHistory: [...currentHistory, moveEntry],
         });
       }
     }
@@ -452,11 +465,23 @@ export const botPlay = internalMutation({
       }
     }
 
-    // Store last move
+    // Store last move and add to history
     const movedPlayer = result.updatedPlayers.find((p) => p.playerId === currentPlayer.playerId);
     if (movedPlayer) {
       const token = movedPlayer.tokens[tokenId];
       if (token) {
+        const moveEntry = {
+          playerId: currentPlayer.playerId,
+          playerNickname: currentPlayer.nickname,
+          playerColor: currentPlayer.color,
+          tokenId,
+          fromPosition: currentPlayer.tokens[tokenId]?.position ?? -1,
+          toPosition: token.position,
+          captured: result.captured,
+          timestamp: Date.now(),
+        };
+        
+        const currentHistory = room.moveHistory ?? [];
         await ctx.db.patch(room._id, {
           lastMove: {
             playerId: currentPlayer.playerId,
@@ -465,6 +490,7 @@ export const botPlay = internalMutation({
             toPosition: token.position,
             captured: result.captured,
           },
+          moveHistory: [...currentHistory, moveEntry],
         });
       }
     }

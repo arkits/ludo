@@ -113,6 +113,7 @@ function transformRoomData(
     diceValue: roomData.diceValue,
     hasRolledDice: roomData.hasRolledDice,
     lastMove: roomData.lastMove,
+    moveHistory: roomData.moveHistory ?? [],
     winner,
     isPlayerTurn,
     currentPlayer,

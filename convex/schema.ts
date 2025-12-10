@@ -21,6 +21,18 @@ export default defineSchema({
       }),
       v.null()
     ),
+    moveHistory: v.optional(v.array(
+      v.object({
+        playerId: v.string(),
+        playerNickname: v.string(),
+        playerColor: v.union(v.literal("red"), v.literal("blue"), v.literal("green"), v.literal("yellow")),
+        tokenId: v.number(),
+        fromPosition: v.number(),
+        toPosition: v.number(),
+        captured: v.boolean(),
+        timestamp: v.number(),
+      })
+    )),
     winnerId: v.union(v.string(), v.null()),
     createdAt: v.number(),
   })
