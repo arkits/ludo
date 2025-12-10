@@ -1,6 +1,6 @@
 # Ludo Multiplayer Web App
 
-A real-time multiplayer Ludo game built with React and Node.js/Socket.io.
+A real-time multiplayer Ludo game built with React and Convex.
 
 ## Features
 
@@ -13,8 +13,8 @@ A real-time multiplayer Ludo game built with React and Node.js/Socket.io.
 ## Tech Stack
 
 - **Frontend**: React + TypeScript + Vite
-- **Backend**: Node.js + Express + Socket.io
-- **State Management**: React Context API
+- **Backend**: Convex (real-time database and backend)
+- **State Management**: React Context API + Convex React hooks
 - **Styling**: CSS Modules
 
 ## Getting Started
@@ -27,45 +27,32 @@ A real-time multiplayer Ludo game built with React and Node.js/Socket.io.
 ### Installation
 
 1. Clone the repository
-2. Install all dependencies (this is a monorepo using npm workspaces):
+2. Install dependencies:
 
 ```bash
 npm install
 ```
 
-This will install dependencies for both `client` and `server` workspaces.
+3. Set up Convex:
+   - Create a Convex account at [convex.dev](https://convex.dev)
+   - Run `npx convex dev` to initialize your Convex project
+   - This will create a `.env.local` file with your `VITE_CONVEX_URL`
 
 ### Running the Application
 
-**Option 1: Run both client and server together**
+1. Start the Convex backend (in one terminal):
+```bash
+npx convex dev
+```
 
+2. Start the development server (in another terminal):
 ```bash
 npm run dev
 ```
 
-This starts both the server and client concurrently. Note: On Windows, you may need to run them separately (see Option 2).
+The application will run on `http://localhost:5173`
 
-**Option 2: Run separately**
-
-Start the server:
-```bash
-npm run dev:server
-# or
-cd server && npm run dev
-```
-
-The server will run on `http://localhost:3001`
-
-Start the client (in a new terminal):
-```bash
-npm run dev:client
-# or
-cd client && npm run dev
-```
-
-The client will run on `http://localhost:5173`
-
-3. Open your browser and navigate to `http://localhost:5173`
+**Note**: Make sure you have set up your Convex project and have the `VITE_CONVEX_URL` environment variable configured.
 
 ## How to Play
 
@@ -84,26 +71,21 @@ The client will run on `http://localhost:5173`
 
 ## Project Structure
 
-This is a monorepo using npm workspaces:
-
 ```
 ludo/
-├── client/          # React frontend workspace
-│   ├── src/
-│   │   ├── components/  # UI components
-│   │   ├── contexts/    # React contexts
-│   │   ├── hooks/       # Custom hooks
-│   │   ├── types/       # TypeScript types
-│   │   └── utils/       # Utility functions
-│   └── package.json
-├── server/          # Node.js backend workspace
-│   ├── src/
-│   │   ├── models/      # Data models
-│   │   ├── game/         # Game logic
-│   │   ├── socket/       # Socket.io handlers
-│   │   └── server.ts     # Server entry point
-│   └── package.json
-├── package.json     # Root workspace configuration
+├── src/             # React frontend source
+│   ├── components/  # UI components
+│   ├── contexts/    # React contexts
+│   ├── hooks/       # Custom hooks
+│   ├── types/       # TypeScript types
+│   └── utils/       # Utility functions
+├── convex/          # Convex backend functions
+│   ├── game.ts      # Game state management
+│   ├── gameLogic.ts # Game logic
+│   ├── rooms.ts     # Room management
+│   ├── password.ts  # Password utilities
+│   └── schema.ts    # Database schema
+├── package.json
 └── README.md
 ```
 
@@ -111,49 +93,28 @@ ludo/
 
 ### Building for Production
 
-Build all workspaces:
+Build the application:
 ```bash
 npm run build
 ```
 
-Build specific workspace:
-```bash
-npm run build:client
-npm run build:server
-```
-
-Or build from within the workspace:
-```bash
-cd client && npm run build
-cd server && npm run build
-```
+This will compile TypeScript and build the Vite bundle for production.
 
 ### Linting
 
-Lint all workspaces:
+Lint the codebase:
 ```bash
 npm run lint
 ```
 
-Lint specific workspace:
+### Deploying
+
+1. Deploy your Convex backend:
 ```bash
-cd client && npm run lint
-cd server && npm run lint
+npx convex deploy
 ```
 
-### Workspace Scripts
-
-Run scripts in specific workspaces:
-```bash
-# Run script in client workspace
-npm run <script> --workspace=client
-
-# Run script in server workspace
-npm run <script> --workspace=server
-
-# Run script in all workspaces
-npm run <script> --workspaces
-```
+2. Build and deploy your frontend to your preferred hosting platform (Vercel, Netlify, etc.)
 
 ## License
 
