@@ -4,15 +4,57 @@
   max-width: 600px;
   aspect-ratio: 1;
   margin: 0 auto;
-  background: #f5f5dc;
-  border-radius: 8px;
+  background: #f5f0e1;
+  border-radius: 4px;
   padding: 0;
   box-shadow: 
-    0 8px 24px rgba(0, 0, 0, 0.3),
-    0 4px 8px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  border: 4px solid #8b4513;
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 6px 16px rgba(0, 0, 0, 0.3),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+  border: 6px solid #5c3d2e;
   overflow: hidden;
+}
+
+/* Wood frame effect */
+.game-board::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  right: -6px;
+  bottom: -6px;
+  background: 
+    linear-gradient(
+      90deg,
+      #4a2f1a 0%,
+      #5c3d2e 15%,
+      #6d4a3a 50%,
+      #5c3d2e 85%,
+      #4a2f1a 100%
+    );
+  border-radius: 8px;
+  z-index: -1;
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 -2px 4px rgba(255, 255, 255, 0.1);
+}
+
+/* Corner brass fittings effect */
+.game-board::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: 
+    radial-gradient(circle at 0 0, rgba(212, 165, 116, 0.3) 0%, transparent 8%),
+    radial-gradient(circle at 100% 0, rgba(212, 165, 116, 0.3) 0%, transparent 8%),
+    radial-gradient(circle at 0 100%, rgba(212, 165, 116, 0.3) 0%, transparent 8%),
+    radial-gradient(circle at 100% 100%, rgba(212, 165, 116, 0.3) 0%, transparent 8%);
+  z-index: 5;
 }
 
 .board-svg {
@@ -32,4 +74,17 @@
 
 .tokens-container > * {
   pointer-events: all;
+}
+
+@media (max-width: 640px) {
+  .game-board {
+    border-width: 4px;
+  }
+  
+  .game-board::before {
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+  }
 }

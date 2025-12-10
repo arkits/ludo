@@ -68,7 +68,7 @@ function App() {
 
       <div className="game-container">
         <div className="game-header">
-          <h1>Ludo Online</h1>
+          <h1 className="logo">Ludo</h1>
           <div className="room-info">
             <span>Room: {state.room.roomId}</span>
             <button 

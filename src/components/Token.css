@@ -14,86 +14,143 @@
   border-radius: 50%;
   border: 3px solid #2c1810;
   box-shadow: 
-    0 3px 6px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    0 4px 8px rgba(0, 0, 0, 0.35),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.15);
   transition: all 0.3s ease;
   position: relative;
 }
 
+/* Glossy highlight */
 .token-inner::before {
   content: '';
   position: absolute;
-  top: 2px;
-  left: 2px;
-  right: 2px;
-  bottom: 2px;
+  top: 3px;
+  left: 3px;
+  right: 3px;
+  bottom: 3px;
   border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3), transparent);
+  background: radial-gradient(
+    ellipse 60% 40% at 35% 25%, 
+    rgba(255, 255, 255, 0.4), 
+    transparent
+  );
   pointer-events: none;
 }
 
+/* Center dot (classic Ludo token look) */
+.token-inner::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
 .token-red .token-inner {
-  background: 
-    radial-gradient(circle at 30% 30%, #d32f2f 0%, #b71c1c 100%);
-  border-color: #8b1a1a;
+  background: radial-gradient(
+    circle at 35% 35%, 
+    #ef5350 0%, 
+    #d32f2f 50%,
+    #b71c1c 100%
+  );
+  border-color: #7f1d1d;
 }
 
 .token-blue .token-inner {
-  background: 
-    radial-gradient(circle at 30% 30%, #4a90e2 0%, #2e5c8a 100%);
-  border-color: #1e3a5f;
+  background: radial-gradient(
+    circle at 35% 35%, 
+    #42a5f5 0%, 
+    #1e88e5 50%,
+    #1565c0 100%
+  );
+  border-color: #0d47a1;
 }
 
 .token-green .token-inner {
-  background: 
-    radial-gradient(circle at 30% 30%, #4a8b6f 0%, #2d5a45 100%);
-  border-color: #1e3d2e;
+  background: radial-gradient(
+    circle at 35% 35%, 
+    #66bb6a 0%, 
+    #43a047 50%,
+    #2e7d32 100%
+  );
+  border-color: #1b5e20;
 }
 
 .token-yellow .token-inner {
-  background: 
-    radial-gradient(circle at 30% 30%, #d4a574 0%, #b8935f 100%);
-  border-color: #8b6f47;
+  background: radial-gradient(
+    circle at 35% 35%, 
+    #ffee58 0%, 
+    #fdd835 50%,
+    #f9a825 100%
+  );
+  border-color: #f57f17;
 }
 
 .token.clickable {
   cursor: pointer;
-  animation: pulse 1.5s infinite;
+  animation: token-pulse 1.5s infinite;
 }
 
 .token.clickable:hover {
-  transform: translate(-50%, -50%) scale(1.4);
+  transform: translate(-50%, -50%) scale(1.35);
   z-index: 20;
 }
 
 .token.clickable .token-inner {
-  border-color: #4a6fa5;
+  border-color: #d4a574;
   border-width: 4px;
   box-shadow: 
-    0 0 16px rgba(74, 111, 165, 0.6),
-    0 4px 8px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    0 0 20px rgba(212, 165, 116, 0.7),
+    0 6px 12px rgba(0, 0, 0, 0.35),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
 }
 
 .token.finished {
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 .token.finished .token-inner {
-  border-color: #4a8b6f;
+  border-color: #2e7d32;
   border-width: 4px;
   box-shadow: 
-    0 0 12px rgba(74, 139, 111, 0.5),
-    0 3px 6px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    0 0 16px rgba(46, 125, 50, 0.5),
+    0 4px 8px rgba(0, 0, 0, 0.3),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
 }
 
-@keyframes pulse {
+@keyframes token-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(74, 111, 165, 0.7);
+    box-shadow: 0 0 0 0 rgba(212, 165, 116, 0.6);
   }
   50% {
-    box-shadow: 0 0 0 12px rgba(74, 111, 165, 0);
+    box-shadow: 0 0 0 14px rgba(212, 165, 116, 0);
   }
+}
+
+/* Stacked tokens indicator */
+.token[data-stack-count]::before {
+  content: attr(data-stack-count);
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(180deg, #5c3d2e 0%, #3d2817 100%);
+  color: #f5e6d3;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Crimson Text', serif;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #8b6f47;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  z-index: 25;
 }
