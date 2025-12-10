@@ -40,15 +40,17 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
   // Auto-fill form if room ID is in URL
   useEffect(() => {
     if (roomIdFromUrl && storedNickname) {
-      // Form is already pre-filled, but we could auto-submit if desired
-      // For now, user needs to click join button
+      // Prefill handled above
     }
   }, [roomIdFromUrl, storedNickname]);
 
   return (
     <div className="lobby">
-      <div className="lobby-container">
-        <h1>Ludo Online</h1>
+      <div className="lobby-container paper-shell torn-paper">
+        <div className="lobby-header">
+          <h2>Jump into a room</h2>
+          <p className="lobby-subtitle">Create one for your crew or join with a room code.</p>
+        </div>
         
         {!action ? (
           <div className="lobby-actions">
@@ -73,7 +75,7 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
             {action === 'create' && (
               <div className="lobby-form-section">
                 <div className="lobby-form-header">
-                  <h2>Create Room</h2>
+                  <h3>Create Room</h3>
                   <button 
                     className="lobby-back-btn"
                     onClick={() => setAction(null)}
@@ -82,6 +84,7 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
                     ← Back
                   </button>
                 </div>
+                <p className="lobby-note">Share the generated room link with friends.</p>
                 <form onSubmit={handleCreateRoom}>
                   <input
                     type="text"
@@ -107,7 +110,7 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
             {action === 'join' && (
               <div className="lobby-form-section">
                 <div className="lobby-form-header">
-                  <h2>Join Room</h2>
+                  <h3>Join Room</h3>
                   <button 
                     className="lobby-back-btn"
                     onClick={() => setAction(null)}
@@ -116,6 +119,7 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
                     ← Back
                   </button>
                 </div>
+                <p className="lobby-note">Paste the room ID from an invite link to hop in.</p>
                 <form onSubmit={handleJoinRoom}>
                   <input
                     type="text"
@@ -143,6 +147,7 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
                     maxLength={20}
                   />
                   <button type="submit">Join Room</button>
+                  <p className="lobby-help">Have an invite link? Use the code after <strong>?room=</strong>.</p>
                 </form>
               </div>
             )}
@@ -152,4 +157,3 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
     </div>
   );
 }
-

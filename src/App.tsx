@@ -9,6 +9,7 @@ import './App.css';
 
 function App() {
   const { state, createRoom, joinRoom, leaveRoom, startGame, rollDice, moveToken, endTurn } = useGame();
+  const githubUrl = 'https://github.com/arkits/ludo';
 
   const handleTokenClick = (playerId: string, tokenId: number) => {
     if (playerId === state.currentPlayerId && state.room?.isPlayerTurn) {
@@ -43,17 +44,52 @@ function App() {
   if (!state.room) {
     return (
       <div className="app">
-        <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} />
+        <header className="brand-bar paper-shell torn-paper">
+          <div className="logo-stack">
+            <div className="logo-wordmark">ludo</div>
+            <p className="logo-subline">Old-school board energy, online rooms.</p>
+          </div>
+          <div className="brand-actions">
+            <span className="brand-tag">Create a room and invite with one link.</span>
+            <a className="brand-link" href={githubUrl} target="_blank" rel="noreferrer">
+              GitHub
+            </a>
+          </div>
+        </header>
+
+        <main className="home-grid">
+          <section className="hero-card paper-shell torn-paper">
+            <p className="eyebrow">Gather · Roll · Race</p>
+            <h1>Play the classic Ludo board with friends, anywhere.</h1>
+            <p className="hero-copy">
+              Start a table in seconds, share a room link, and keep every move in sync.
+              Zero sign-ups—just pick a nickname and roll.
+            </p>
+            <div className="hero-pills">
+              <span>No accounts needed</span>
+              <span>Shareable room links</span>
+              <span>Classic rules & colors</span>
+            </div>
+          </section>
+
+          <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} />
+        </main>
+
         {state.error && (
           <div className="error-banner">
             {state.error}
           </div>
         )}
+
+        <footer className="app-footer">
+          <span>Made for cozy, competitive nights in.</span>
+          <a href={githubUrl} target="_blank" rel="noreferrer">
+            View on GitHub
+          </a>
+        </footer>
       </div>
     );
   }
-
-  // Show game if in room
 
   // Use valid moves from state (calculated in context)
   const validMoves = state.validMoves;
@@ -66,11 +102,14 @@ function App() {
         </div>
       )}
 
-      <div className="game-container">
+      <div className="game-container paper-shell torn-paper">
         <div className="game-header">
-          <h1>Ludo Online</h1>
+          <div className="logo-stack">
+            <div className="logo-wordmark">ludo</div>
+            <p className="logo-subline">Room vibes · keep the pieces moving</p>
+          </div>
           <div className="room-info">
-            <span>Room: {state.room.roomId}</span>
+            <span className="room-chip">Room {state.room.roomId}</span>
             <button 
               className="copy-link-btn-header" 
               onClick={() => {
@@ -166,7 +205,14 @@ function App() {
           </div>
         )}
       </div>
-      </div>
+
+      <footer className="app-footer app-footer-floating">
+        <span>Need the repo?</span>
+        <a href={githubUrl} target="_blank" rel="noreferrer">
+          View on GitHub
+        </a>
+      </footer>
+    </div>
   );
 }
 
