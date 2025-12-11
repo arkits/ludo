@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import Dice from './Dice';
 import './GameControls.css';
 
@@ -28,6 +29,32 @@ export default function GameControls({
   isRoomCreator,
   canStartGame
 }: GameControlsProps) {
+  // Handle spacebar to roll dice during gameplay
+  useEffect(() => {
+    if (gameState !== 'playing') return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input, textarea, or other editable element
+      const target = event.target as HTMLElement;
+      const isEditableElement = 
+        target.tagName === 'INPUT' || 
+        target.tagName === 'TEXTAREA' || 
+        target.isContentEditable;
+
+      if (isEditableElement) return;
+
+      // Only trigger spacebar when it's player's turn and they haven't rolled
+      if (event.code === 'Space' && isPlayerTurn && !hasRolledDice && !isRollingDice) {
+        event.preventDefault();
+        onRollDice();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [gameState, isPlayerTurn, hasRolledDice, isRollingDice, onRollDice]);
   if (gameState === 'waiting') {
     return (
       <div className="game-controls">
@@ -67,9 +94,12 @@ export default function GameControls({
       
       <div className="control-buttons">
         {isPlayerTurn && !hasRolledDice && (
-          <button className="roll-dice-btn" onClick={onRollDice}>
-            Roll Dice
-          </button>
+          <>
+            <button className="roll-dice-btn" onClick={onRollDice}>
+              Roll Dice
+            </button>
+            <p className="dice-help-text">Press <kbd>Space</kbd> to roll</p>
+          </>
         )}
         
         {isPlayerTurn && hasRolledDice && canEndTurn && (

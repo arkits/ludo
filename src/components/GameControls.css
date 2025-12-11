@@ -42,6 +42,30 @@
   max-width: 220px;
 }
 
+.dice-help-text {
+  text-align: center;
+  color: #8b6f47;
+  font-size: 12px;
+  margin: 0;
+  font-weight: 400;
+  font-family: 'Crimson Text', serif;
+  opacity: 0.7;
+}
+
+.dice-help-text kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #5c3d2e;
+  background-color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(139, 111, 71, 0.3);
+  border-radius: 3px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+}
+
 .roll-dice-btn,
 .end-turn-btn,
 .start-game-btn {
