@@ -81,131 +81,134 @@ export default function WaitingRoom({
         </button>
       </div>
 
-      {/* Room Code Card */}
-      <div className="wr-room-card">
-        <div className="wr-room-code-label">Room Code</div>
-        <div className="wr-room-code">{room.roomId}</div>
-        <button 
-          className={`wr-copy-btn ${copied ? 'copied' : ''}`} 
-          onClick={copyRoomLink}
-        >
-          {copied ? '✓ Copied!' : 'Copy Invite Link'}
-        </button>
-      </div>
+      {/* Main Content Grid */}
+      <div className="wr-main-content">
+        {/* Room Code Card */}
+        <div className="wr-room-card">
+          <div className="wr-room-code-label">Room Code</div>
+          <div className="wr-room-code">{room.roomId}</div>
+          <button 
+            className={`wr-copy-btn ${copied ? 'copied' : ''}`} 
+            onClick={copyRoomLink}
+          >
+            {copied ? '✓ Copied!' : 'Copy Invite Link'}
+          </button>
+        </div>
 
-      {/* Your Settings Card */}
-      {currentPlayer && (
-        <div className="wr-settings-card">
-          <h3>Your Settings</h3>
-          
-          {/* Name Edit */}
-          <div className="wr-setting-row">
-            <label>Name</label>
-            {isEditing ? (
-              <div className="wr-name-edit">
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  maxLength={20}
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveName();
-                    if (e.key === 'Escape') {
+        {/* Your Settings Card */}
+        {currentPlayer && (
+          <div className="wr-settings-card">
+            <h3>Your Settings</h3>
+            
+            {/* Name Edit */}
+            <div className="wr-setting-row">
+              <label>Name</label>
+              {isEditing ? (
+                <div className="wr-name-edit">
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    maxLength={20}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveName();
+                      if (e.key === 'Escape') {
+                        setEditName(currentPlayer.nickname);
+                        setIsEditing(false);
+                      }
+                    }}
+                  />
+                  <button className="wr-save-btn" onClick={handleSaveName}>Save</button>
+                  <button 
+                    className="wr-cancel-btn" 
+                    onClick={() => {
                       setEditName(currentPlayer.nickname);
                       setIsEditing(false);
-                    }
-                  }}
-                />
-                <button className="wr-save-btn" onClick={handleSaveName}>Save</button>
-                <button 
-                  className="wr-cancel-btn" 
-                  onClick={() => {
-                    setEditName(currentPlayer.nickname);
-                    setIsEditing(false);
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <div className="wr-name-display">
-                <span>{currentPlayer.nickname}</span>
-                <button className="wr-edit-btn" onClick={() => setIsEditing(true)}>
-                  Edit
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Color Selection */}
-          <div className="wr-setting-row">
-            <label>Color</label>
-            <div className="wr-color-options">
-              {COLORS.map((color) => {
-                const isTaken = takenColors.includes(color.value);
-                const isSelected = currentPlayer.color === color.value;
-                return (
-                  <button
-                    key={color.value}
-                    className={`wr-color-btn wr-color-${color.value} ${isSelected ? 'selected' : ''} ${isTaken ? 'taken' : ''}`}
-                    onClick={() => !isTaken && handleColorChange(color.value)}
-                    disabled={isTaken}
-                    title={isTaken ? `${color.label} is taken` : color.label}
+                    }}
                   >
-                    {isSelected && <span className="wr-check">✓</span>}
+                    Cancel
                   </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Players List */}
-      <div className="wr-players-card">
-        <h3>Players ({room.players.length}/{room.maxPlayers})</h3>
-        <div className="wr-players-list">
-          {room.players.map((player, index) => (
-            <div 
-              key={player.id} 
-              className={`wr-player-item ${player.id === currentPlayerId ? 'is-you' : ''} ${player.isBot ? 'is-bot' : ''}`}
-            >
-              <div className={`wr-player-color wr-color-${player.color}`} />
-              <span className="wr-player-name">
-                {player.nickname}
-                {player.id === currentPlayerId && <span className="wr-you-tag">You</span>}
-                {index === 0 && <span className="wr-host-tag">Host</span>}
-                {player.isBot && <span className="wr-bot-tag">Bot</span>}
-              </span>
-              {/* Remove bot button (only for host) */}
-              {isRoomCreator && player.isBot && (
-                <button 
-                  className="wr-remove-bot-btn"
-                  onClick={() => onRemoveBot(player.id)}
-                  title="Remove bot"
-                >
-                  ✕
-                </button>
+                </div>
+              ) : (
+                <div className="wr-name-display">
+                  <span>{currentPlayer.nickname}</span>
+                  <button className="wr-edit-btn" onClick={() => setIsEditing(true)}>
+                    Edit
+                  </button>
+                </div>
               )}
             </div>
-          ))}
-          
-          {/* Empty slots */}
-          {Array.from({ length: room.maxPlayers - room.players.length }).map((_, i) => (
-            <div key={`empty-${i}`} className="wr-player-item empty">
-              <div className="wr-player-color empty" />
-              <span className="wr-player-name">Waiting for player...</span>
+
+            {/* Color Selection */}
+            <div className="wr-setting-row">
+              <label>Color</label>
+              <div className="wr-color-options">
+                {COLORS.map((color) => {
+                  const isTaken = takenColors.includes(color.value);
+                  const isSelected = currentPlayer.color === color.value;
+                  return (
+                    <button
+                      key={color.value}
+                      className={`wr-color-btn wr-color-${color.value} ${isSelected ? 'selected' : ''} ${isTaken ? 'taken' : ''}`}
+                      onClick={() => !isTaken && handleColorChange(color.value)}
+                      disabled={isTaken}
+                      title={isTaken ? `${color.label} is taken` : color.label}
+                    >
+                      {isSelected && <span className="wr-check">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          ))}
-        </div>
-        
-        {/* Add Bot button (only for host) */}
-        {isRoomCreator && canAddBot && (
-          <button className="wr-add-bot-btn" onClick={onAddBot}>
-            + Add Bot
-          </button>
+          </div>
         )}
+
+        {/* Players List */}
+        <div className="wr-players-card">
+          <h3>Players ({room.players.length}/{room.maxPlayers})</h3>
+          <div className="wr-players-list">
+            {room.players.map((player, index) => (
+              <div 
+                key={player.id} 
+                className={`wr-player-item ${player.id === currentPlayerId ? 'is-you' : ''} ${player.isBot ? 'is-bot' : ''}`}
+              >
+                <div className={`wr-player-color wr-color-${player.color}`} />
+                <span className="wr-player-name">
+                  {player.nickname}
+                  {player.id === currentPlayerId && <span className="wr-you-tag">You</span>}
+                  {index === 0 && <span className="wr-host-tag">Host</span>}
+                  {player.isBot && <span className="wr-bot-tag">Bot</span>}
+                </span>
+                {/* Remove bot button (only for host) */}
+                {isRoomCreator && player.isBot && (
+                  <button 
+                    className="wr-remove-bot-btn"
+                    onClick={() => onRemoveBot(player.id)}
+                    title="Remove bot"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+            
+            {/* Empty slots */}
+            {Array.from({ length: room.maxPlayers - room.players.length }).map((_, i) => (
+              <div key={`empty-${i}`} className="wr-player-item empty">
+                <div className="wr-player-color empty" />
+                <span className="wr-player-name">Waiting for player...</span>
+              </div>
+            ))}
+          </div>
+          
+          {/* Add Bot button (only for host) */}
+          {isRoomCreator && canAddBot && (
+            <button className="wr-add-bot-btn" onClick={onAddBot}>
+              + Add Bot
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Status & Actions */}

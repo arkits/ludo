@@ -1,16 +1,36 @@
 .waiting-room {
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 32px 24px;
-  background: linear-gradient(
-    135deg,
-    #faf8f5 0%,
-    #f5f0e8 100%
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  padding: 24px;
+  background: 
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"),
+    linear-gradient(
+      135deg,
+      #e8d4b8 0%,
+      #d4b896 25%,
+      #c9a882 50%,
+      #d4b896 75%,
+      #e0c9a6 100%
+    );
+  background-blend-mode: overlay, normal;
+  clip-path: polygon(
+    0% 2%, 2% 0%, 5% 1%, 8% 0%, 12% 2%, 15% 0%, 18% 1%, 22% 0%, 
+    25% 2%, 28% 0%, 32% 1%, 35% 0%, 38% 2%, 42% 0%, 45% 1%, 48% 0%,
+    52% 2%, 55% 0%, 58% 1%, 62% 0%, 65% 2%, 68% 0%, 72% 1%, 75% 0%,
+    78% 2%, 82% 0%, 85% 1%, 88% 0%, 92% 2%, 95% 0%, 98% 1%, 100% 2%,
+    100% 98%, 98% 100%, 95% 99%, 92% 100%, 88% 98%, 85% 100%, 82% 99%, 78% 100%,
+    75% 98%, 72% 100%, 68% 99%, 65% 100%, 62% 98%, 58% 100%, 55% 99%, 52% 100%,
+    48% 98%, 45% 100%, 42% 99%, 38% 100%, 35% 98%, 32% 100%, 28% 99%, 25% 100%,
+    22% 98%, 18% 100%, 15% 99%, 12% 100%, 8% 98%, 5% 100%, 2% 99%, 0% 98%
   );
-  border-radius: 16px;
   box-shadow: 
-    0 4px 24px rgba(0, 0, 0, 0.08),
-    0 1px 2px rgba(0, 0, 0, 0.04);
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  overflow: hidden;
+  min-height: 0;
 }
 
 /* Header */
@@ -18,15 +38,17 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 .wr-header h2 {
   margin: 0;
   font-size: 24px;
   font-weight: 700;
-  color: #2c1810;
+  color: #8b4513;
   font-family: 'Playfair Display', serif;
+  text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.5);
 }
 
 .wr-leave-btn {
@@ -48,13 +70,44 @@
   color: #5d4037;
 }
 
+/* Main Content Grid */
+.wr-main-content {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  margin-bottom: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 111, 71, 0.5) transparent;
+}
+
+.wr-main-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.wr-main-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.wr-main-content::-webkit-scrollbar-thumb {
+  background: rgba(139, 111, 71, 0.5);
+  border-radius: 4px;
+}
+
+.wr-main-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 111, 71, 0.7);
+}
+
 /* Room Code Card */
 .wr-room-card {
   background: white;
   border-radius: 12px;
   padding: 20px;
   text-align: center;
-  margin-bottom: 20px;
   border: 1px solid #e8e0d5;
 }
 
@@ -104,8 +157,9 @@
   background: white;
   border-radius: 12px;
   padding: 20px;
-  margin-bottom: 20px;
   border: 1px solid #e8e0d5;
+  display: flex;
+  flex-direction: column;
 }
 
 .wr-settings-card h3 {
@@ -301,6 +355,29 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 111, 71, 0.3) transparent;
+  padding-right: 4px;
+}
+
+.wr-players-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.wr-players-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.wr-players-list::-webkit-scrollbar-thumb {
+  background: rgba(139, 111, 71, 0.3);
+  border-radius: 3px;
+}
+
+.wr-players-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 111, 71, 0.5);
 }
 
 .wr-player-item {
@@ -449,6 +526,9 @@
 /* Actions */
 .wr-actions {
   text-align: center;
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: 16px;
 }
 
 .wr-status {
@@ -488,16 +568,96 @@
   cursor: not-allowed;
 }
 
-/* Responsive */
-@media (max-width: 480px) {
+/* Desktop Layout - Use horizontal space */
+@media (min-width: 768px) {
   .waiting-room {
-    padding: 20px 16px;
+    padding: 32px;
+  }
+
+  .wr-main-content {
+    grid-template-columns: 350px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .wr-room-card {
+    grid-column: 1 / -1;
+  }
+
+  .wr-settings-card {
+    height: fit-content;
+  }
+
+  .wr-players-card {
+    min-height: 300px;
+  }
+}
+
+/* Large Desktop Layout - Even better use of space */
+@media (min-width: 1024px) {
+  .wr-main-content {
+    grid-template-columns: 380px 1fr;
+    gap: 24px;
+  }
+
+  .wr-header {
+    margin-bottom: 24px;
+  }
+}
+
+/* Responsive Mobile */
+@media (max-width: 767px) {
+  .waiting-room {
+    padding: 12px;
     border-radius: 0;
   }
   
+  .wr-header {
+    margin-bottom: 12px;
+  }
+
+  .wr-header h2 {
+    font-size: 20px;
+  }
+
+  .wr-leave-btn {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  .wr-main-content {
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-right: 4px;
+  }
+
+  .wr-room-card {
+    padding: 16px;
+  }
+  
   .wr-room-code {
-    font-size: 28px;
-    letter-spacing: 4px;
+    font-size: 24px;
+    letter-spacing: 3px;
+  }
+
+  .wr-room-code-label {
+    font-size: 11px;
+  }
+
+  .wr-copy-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .wr-settings-card,
+  .wr-players-card {
+    padding: 16px;
+  }
+
+  .wr-settings-card h3,
+  .wr-players-card h3 {
+    font-size: 15px;
+    margin-bottom: 12px;
   }
   
   .wr-color-btn {
@@ -511,5 +671,42 @@
   
   .wr-name-edit input {
     width: 100%;
+  }
+
+  .wr-actions {
+    padding-top: 8px;
+  }
+
+  .wr-start-btn {
+    padding: 14px 20px;
+    font-size: 16px;
+    letter-spacing: 1px;
+  }
+
+  .wr-status {
+    padding: 12px;
+    font-size: 14px;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 360px) {
+  .waiting-room {
+    padding: 8px;
+  }
+
+  .wr-header h2 {
+    font-size: 18px;
+  }
+
+  .wr-room-code {
+    font-size: 20px;
+    letter-spacing: 2px;
+  }
+
+  .wr-settings-card,
+  .wr-players-card,
+  .wr-room-card {
+    padding: 12px;
   }
 }

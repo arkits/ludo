@@ -1,9 +1,7 @@
 import { useEffect } from 'react';
-import Dice from './Dice';
 import './GameControls.css';
 
 interface GameControlsProps {
-  diceValue: number;
   hasRolledDice: boolean;
   isPlayerTurn: boolean;
   canEndTurn: boolean;
@@ -17,7 +15,6 @@ interface GameControlsProps {
 }
 
 export default function GameControls({
-  diceValue,
   hasRolledDice,
   isPlayerTurn,
   canEndTurn,
@@ -81,17 +78,8 @@ export default function GameControls({
     );
   }
 
-  // Show dice only when rolling or after rolling (has rolled)
-  const shouldShowDice = isRollingDice || hasRolledDice;
-
   return (
     <div className="game-controls">
-      {shouldShowDice && (
-        <div className="dice-container">
-          <Dice value={diceValue} isRolling={isRollingDice} show={true} />
-        </div>
-      )}
-      
       <div className="control-buttons">
         {isPlayerTurn && !hasRolledDice && (
           <>
