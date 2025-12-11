@@ -16,6 +16,8 @@ interface TokenProps {
   onClick: (playerId: string, tokenId: number) => void;
 }
 
+const BOARD_SIZE = 600; // Base board size in pixels
+
 export default function Token({ token, color, playerId, isValidMove, isCurrentPlayer, onClick }: TokenProps) {
   const getPosition = () => {
     if (token.isHome) {
@@ -31,6 +33,9 @@ export default function Token({ token, color, playerId, isValidMove, isCurrentPl
   };
 
   const position = getPosition();
+  // Convert pixel positions to percentages for responsive scaling
+  const leftPercent = (position.x / BOARD_SIZE) * 100;
+  const topPercent = (position.y / BOARD_SIZE) * 100;
   const colorClass = `token-${color}`;
   const clickable = isValidMove && isCurrentPlayer;
 
@@ -38,8 +43,8 @@ export default function Token({ token, color, playerId, isValidMove, isCurrentPl
     <div
       className={`token ${colorClass} ${clickable ? 'clickable' : ''} ${token.isFinished ? 'finished' : ''}`}
       style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
+        left: `${leftPercent}%`,
+        top: `${topPercent}%`,
         cursor: clickable ? 'pointer' : 'default'
       }}
       onClick={() => clickable && onClick(playerId, token.id)}
