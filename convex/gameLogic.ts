@@ -287,6 +287,14 @@ export function getValidMoves(
 
 /**
  * Check if a token captures an opponent's token
+ * Game rule: When a player's token lands on a spot that already has another player's token,
+ * the token that was already there is moved back to its home, while the new token takes its spot.
+ * 
+ * Exceptions (standard Ludo rules):
+ * - Cannot capture in home column (positions 52+)
+ * - Cannot capture on safe zones (start positions and star squares)
+ * - Cannot capture blocks (2+ tokens of the same player at the same position)
+ * 
  * Returns updated players array with captures applied
  */
 export function checkCapture(
@@ -310,15 +318,17 @@ export function checkCapture(
     return players; // Can't capture when there's a block
   }
 
-  // Check all other players' tokens
+  // Check all other players' tokens at this position
+  // If any opponent token is found, send it back to home base
   return players.map((player) => {
     if (player.playerId === movingPlayer.playerId) {
-      return player;
+      return player; // Skip the moving player
     }
 
     const updatedTokens = player.tokens.map((token) => {
+      // If this opponent's token is at the landing position, capture it
       if (token.position === position && !token.isHome && !token.isFinished) {
-        // Capture! Send token back to home base
+        // Capture! Send token back to home base (position -1, isHome = true)
         return {
           ...token,
           position: -1,
