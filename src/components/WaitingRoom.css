@@ -4,28 +4,24 @@
   height: 100%;
   width: 100%;
   padding: 24px;
-  background: 
+  background:
     url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"),
-    linear-gradient(
-      135deg,
+    linear-gradient(135deg,
       #e8d4b8 0%,
       #d4b896 25%,
       #c9a882 50%,
       #d4b896 75%,
-      #e0c9a6 100%
-    );
+      #e0c9a6 100%);
   background-blend-mode: overlay, normal;
-  clip-path: polygon(
-    0% 2%, 2% 0%, 5% 1%, 8% 0%, 12% 2%, 15% 0%, 18% 1%, 22% 0%, 
-    25% 2%, 28% 0%, 32% 1%, 35% 0%, 38% 2%, 42% 0%, 45% 1%, 48% 0%,
-    52% 2%, 55% 0%, 58% 1%, 62% 0%, 65% 2%, 68% 0%, 72% 1%, 75% 0%,
-    78% 2%, 82% 0%, 85% 1%, 88% 0%, 92% 2%, 95% 0%, 98% 1%, 100% 2%,
-    100% 98%, 98% 100%, 95% 99%, 92% 100%, 88% 98%, 85% 100%, 82% 99%, 78% 100%,
-    75% 98%, 72% 100%, 68% 99%, 65% 100%, 62% 98%, 58% 100%, 55% 99%, 52% 100%,
-    48% 98%, 45% 100%, 42% 99%, 38% 100%, 35% 98%, 32% 100%, 28% 99%, 25% 100%,
-    22% 98%, 18% 100%, 15% 99%, 12% 100%, 8% 98%, 5% 100%, 2% 99%, 0% 98%
-  );
-  box-shadow: 
+  clip-path: polygon(0% 2%, 2% 0%, 5% 1%, 8% 0%, 12% 2%, 15% 0%, 18% 1%, 22% 0%,
+      25% 2%, 28% 0%, 32% 1%, 35% 0%, 38% 2%, 42% 0%, 45% 1%, 48% 0%,
+      52% 2%, 55% 0%, 58% 1%, 62% 0%, 65% 2%, 68% 0%, 72% 1%, 75% 0%,
+      78% 2%, 82% 0%, 85% 1%, 88% 0%, 92% 2%, 95% 0%, 98% 1%, 100% 2%,
+      100% 98%, 98% 100%, 95% 99%, 92% 100%, 88% 98%, 85% 100%, 82% 99%, 78% 100%,
+      75% 98%, 72% 100%, 68% 99%, 65% 100%, 62% 98%, 58% 100%, 55% 99%, 52% 100%,
+      48% 98%, 45% 100%, 42% 99%, 38% 100%, 35% 98%, 32% 100%, 28% 99%, 25% 100%,
+      22% 98%, 18% 100%, 15% 99%, 12% 100%, 8% 98%, 5% 100%, 2% 99%, 0% 98%);
+  box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
   border-radius: 16px;
@@ -331,7 +327,7 @@
   color: white;
   font-size: 18px;
   font-weight: bold;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 /* Players Card */
@@ -405,7 +401,7 @@
   height: 32px;
   border-radius: 50%;
   flex-shrink: 0;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .wr-player-color.wr-color-red {
@@ -606,12 +602,19 @@
 }
 
 /* Responsive Mobile */
-@media (max-width: 767px) {
+@media (max-width: 768px) {
   .waiting-room {
-    padding: 12px;
+    padding: 20px 16px;
+    /* increased internal padding for better spacing */
     border-radius: 0;
+    clip-path: none;
+    /* key change to remove torn edges and fill corners */
+    box-shadow: none;
+    /* remove shadow if we are filling the screen, or keep it? better to remove if full bleed */
+    background-color: #e8d4b8;
+    /* fallback/solid color if gradient/texture feels weird full bleed, but texture is fine */
   }
-  
+
   .wr-header {
     margin-bottom: 12px;
   }
@@ -628,13 +631,16 @@
   .wr-main-content {
     gap: 12px;
     margin-bottom: 12px;
-    padding-right: 4px;
+    padding-right: 0px;
+    /* Remove right padding to save space */
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .wr-room-card {
-    padding: 16px;
+    padding: 16px 12px;
   }
-  
+
   .wr-room-code {
     font-size: 24px;
     letter-spacing: 3px;
@@ -651,7 +657,7 @@
 
   .wr-settings-card,
   .wr-players-card {
-    padding: 16px;
+    padding: 16px 12px;
   }
 
   .wr-settings-card h3,
@@ -659,22 +665,25 @@
     font-size: 15px;
     margin-bottom: 12px;
   }
-  
+
   .wr-color-btn {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    /* Slightly smaller to fit better */
+    height: 38px;
   }
-  
+
   .wr-name-edit {
     flex-wrap: wrap;
   }
-  
+
   .wr-name-edit input {
     width: 100%;
   }
 
   .wr-actions {
     padding-top: 8px;
+    padding-bottom: 48px;
+    /* Increased to fix cut-off at bottom definitively */
   }
 
   .wr-start-btn {
@@ -692,7 +701,7 @@
 /* Very small screens */
 @media (max-width: 360px) {
   .waiting-room {
-    padding: 8px;
+    padding: 8px 4px;
   }
 
   .wr-header h2 {
