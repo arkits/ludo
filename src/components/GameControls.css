@@ -2,31 +2,27 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
-  padding: 32px;
+  gap: 12px;
+  padding: 16px 24px;
   position: relative;
-  background: 
+  background:
     url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"),
-    linear-gradient(
-      135deg,
+    linear-gradient(135deg,
       #e8d4b8 0%,
       #d4b896 25%,
       #c9a882 50%,
       #d4b896 75%,
-      #e0c9a6 100%
-    );
+      #e0c9a6 100%);
   background-blend-mode: overlay, normal;
-  clip-path: polygon(
-    0% 2%, 3% 0%, 6% 2%, 10% 0%, 14% 2%, 18% 0%, 
-    82% 0%, 86% 2%, 90% 0%, 94% 2%, 97% 0%, 100% 2%,
-    100% 98%, 97% 100%, 94% 98%, 90% 100%, 86% 98%, 82% 100%,
-    18% 100%, 14% 98%, 10% 100%, 6% 98%, 3% 100%, 0% 98%
-  );
-  box-shadow: 
+  clip-path: polygon(0% 2%, 3% 0%, 6% 2%, 10% 0%, 14% 2%, 18% 0%,
+      82% 0%, 86% 2%, 90% 0%, 94% 2%, 97% 0%, 100% 2%,
+      100% 98%, 97% 100%, 94% 98%, 90% 100%, 86% 98%, 82% 100%,
+      18% 100%, 14% 98%, 10% 100%, 6% 98%, 3% 100%, 0% 98%);
+  box-shadow:
     0 6px 24px rgba(0, 0, 0, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
   flex-shrink: 0;
-  min-height: 180px;
+  min-height: auto;
 }
 
 
@@ -65,7 +61,7 @@
 .roll-dice-btn,
 .end-turn-btn,
 .start-game-btn {
-  padding: 14px 28px;
+  padding: 10px 20px;
   border-radius: 8px;
   font-size: 16px;
   font-weight: 700;
@@ -74,31 +70,27 @@
   font-family: 'Crimson Text', serif;
   text-transform: uppercase;
   letter-spacing: 1px;
-  box-shadow: 
+  box-shadow:
     0 4px 8px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .roll-dice-btn {
-  background: linear-gradient(
-    180deg,
-    #5c3d2e 0%,
-    #4a2f1a 50%,
-    #3d2817 100%
-  );
+  background: linear-gradient(180deg,
+      #5c3d2e 0%,
+      #4a2f1a 50%,
+      #3d2817 100%);
   color: #f5e6d3;
   border: 3px solid #8b6f47;
 }
 
 .roll-dice-btn:hover:not(:disabled) {
-  background: linear-gradient(
-    180deg,
-    #6d4a3a 0%,
-    #5c3d2e 50%,
-    #4a2f1a 100%
-  );
+  background: linear-gradient(180deg,
+      #6d4a3a 0%,
+      #5c3d2e 50%,
+      #4a2f1a 100%);
   transform: translateY(-2px);
-  box-shadow: 
+  box-shadow:
     0 6px 16px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
@@ -113,25 +105,21 @@
 }
 
 .end-turn-btn {
-  background: linear-gradient(
-    180deg,
-    #4a8b6f 0%,
-    #3d7a5f 50%,
-    #2d5a45 100%
-  );
+  background: linear-gradient(180deg,
+      #4a8b6f 0%,
+      #3d7a5f 50%,
+      #2d5a45 100%);
   color: white;
   border: 3px solid #2d5a45;
 }
 
 .end-turn-btn:hover:not(:disabled) {
-  background: linear-gradient(
-    180deg,
-    #5a9b7f 0%,
-    #4a8b6f 50%,
-    #3d7a5f 100%
-  );
+  background: linear-gradient(180deg,
+      #5a9b7f 0%,
+      #4a8b6f 50%,
+      #3d7a5f 100%);
   transform: translateY(-2px);
-  box-shadow: 
+  box-shadow:
     0 6px 16px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
@@ -141,12 +129,10 @@
 }
 
 .start-game-btn {
-  background: linear-gradient(
-    180deg,
-    #5c3d2e 0%,
-    #4a2f1a 50%,
-    #3d2817 100%
-  );
+  background: linear-gradient(180deg,
+      #5c3d2e 0%,
+      #4a2f1a 50%,
+      #3d2817 100%);
   color: #f5e6d3;
   border: 3px solid #8b6f47;
   font-size: 18px;
@@ -154,14 +140,12 @@
 }
 
 .start-game-btn:hover {
-  background: linear-gradient(
-    180deg,
-    #6d4a3a 0%,
-    #5c3d2e 50%,
-    #4a2f1a 100%
-  );
+  background: linear-gradient(180deg,
+      #6d4a3a 0%,
+      #5c3d2e 50%,
+      #4a2f1a 100%);
   transform: translateY(-2px);
-  box-shadow: 
+  box-shadow:
     0 6px 16px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
@@ -198,7 +182,7 @@
   .game-controls {
     padding: 24px 20px;
   }
-  
+
   .roll-dice-btn,
   .end-turn-btn,
   .start-game-btn {

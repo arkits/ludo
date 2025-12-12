@@ -235,7 +235,7 @@
 .game-play {
   display: grid;
   grid-template-columns: 380px 1fr;
-  gap: 24px;
+  gap: 16px;
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -269,9 +269,10 @@
 .game-main {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   align-items: center;
   justify-content: flex-start;
   position: relative;
@@ -287,17 +288,15 @@
   align-items: center;
   z-index: 1000;
   pointer-events: none;
-  padding: 60px;
-  border-radius: 50%;
-  background: radial-gradient(circle,
-      rgba(212, 165, 116, 0.25) 0%,
-      rgba(212, 165, 116, 0.15) 30%,
-      rgba(212, 165, 116, 0.08) 50%,
-      rgba(212, 165, 116, 0.03) 70%,
-      transparent 100%);
+  width: 220px;
+  height: 240px;
+  border-radius: 24px;
+  background: rgba(212, 165, 116, 0.7);
+  border: 4px solid rgba(255, 230, 200, 0.8);
   box-shadow:
-    0 0 80px rgba(212, 165, 116, 0.3),
-    0 0 120px rgba(212, 165, 116, 0.15);
+    0 0 30px rgba(212, 165, 116, 0.8),
+    0 0 60px rgba(212, 165, 116, 0.4),
+    inset 0 0 40px rgba(255, 230, 200, 0.4);
 }
 
 .dice-container>* {
@@ -379,7 +378,8 @@
 
   .game-main {
     height: 100%;
-    justify-content: center;
+    justify-content: flex-start;
+    overflow-y: auto;
   }
 }
 

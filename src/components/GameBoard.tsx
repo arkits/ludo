@@ -18,6 +18,7 @@ interface GameBoardProps {
   currentPlayerColor: PlayerColor | null;
   validMoves: number[];
   onTokenClick: (playerId: string, tokenId: number) => void;
+  children?: React.ReactNode;
 }
 
 // Board dimensions for 15x15 grid
@@ -34,7 +35,7 @@ const COLORS = {
 };
 
 
-export default function GameBoard({ players, currentPlayerColor, validMoves, onTokenClick }: GameBoardProps) {
+export default function GameBoard({ players, currentPlayerColor, validMoves, onTokenClick, children }: GameBoardProps) {
   const getPlayerByColor = (color: PlayerColor) => {
     return players.find(p => p.color === color);
   };
@@ -67,7 +68,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
     const cx = x + CELL_SIZE / 2;
     const cy = y + CELL_SIZE / 2;
     const size = 8;
-    
+
     let points = '';
     switch (direction) {
       case 'up':
@@ -83,7 +84,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
         points = `${cx + size},${cy} ${cx - size},${cy - size} ${cx - size},${cy + size}`;
         break;
     }
-    
+
     return <polygon points={points} fill={color} stroke="#333" strokeWidth="0.5" />;
   };
 
@@ -92,7 +93,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
     const circleRadius = CELL_SIZE * 1.8;
     const centerX = startX + HOME_BASE_SIZE / 2;
     const centerY = startY + HOME_BASE_SIZE / 2;
-    
+
     // Token positions in a 2x2 grid inside the circle
     const tokenPositions = [
       { x: centerX - CELL_SIZE * 0.8, y: centerY - CELL_SIZE * 0.8 },
@@ -141,7 +142,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
   // Render the main track squares (3 columns per arm)
   const renderMainTrack = () => {
     const squares: React.ReactNode[] = [];
-    
+
     // === TOP ARM (above center) ===
     // 3 columns: left (6), middle (7 - red home), right (8)
     for (let row = 0; row < 6; row++) {
@@ -168,7 +169,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           </g>
         );
       }
-      
+
       // Middle column (col 7) - Red home stretch
       if (row > 0) { // Skip row 0 (that's part of the track)
         const midX = 7 * CELL_SIZE;
@@ -186,7 +187,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           />
         );
       }
-      
+
       // Right column (col 8) - main track
       const rightX = 8 * CELL_SIZE;
       const rightY = row * CELL_SIZE;
@@ -221,7 +222,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           strokeWidth="1"
         />
       );
-      
+
       // Middle column (col 7) - Yellow home stretch
       if (row < 14) { // Skip row 14 (that's part of the track)
         const midX = 7 * CELL_SIZE;
@@ -239,7 +240,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           />
         );
       }
-      
+
       // Right column (col 8) - main track
       const rightX = 8 * CELL_SIZE;
       const rightY = row * CELL_SIZE;
@@ -282,7 +283,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           strokeWidth="1"
         />
       );
-      
+
       // Middle row (row 7) - Blue home stretch
       if (col > 0) { // Skip col 0 (that's part of the track)
         const midX = col * CELL_SIZE;
@@ -300,7 +301,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           />
         );
       }
-      
+
       // Bottom row (row 8) - main track
       const bottomX = col * CELL_SIZE;
       const bottomY = 8 * CELL_SIZE;
@@ -351,7 +352,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           </g>
         );
       }
-      
+
       // Middle row (row 7) - Green home stretch
       if (col < 14) { // Skip col 14 (that's part of the track)
         const midX = col * CELL_SIZE;
@@ -369,7 +370,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           />
         );
       }
-      
+
       // Bottom row (row 8) - main track
       const bottomX = col * CELL_SIZE;
       const bottomY = 8 * CELL_SIZE;
@@ -386,24 +387,24 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
         />
       );
     }
-    
+
 
     // Add safe square stars
     // Red safe (col 2, row 6)
     squares.push(
-      <g key="safe-red">{renderStar(2 * CELL_SIZE + CELL_SIZE/2, 6 * CELL_SIZE + CELL_SIZE/2)}</g>
+      <g key="safe-red">{renderStar(2 * CELL_SIZE + CELL_SIZE / 2, 6 * CELL_SIZE + CELL_SIZE / 2)}</g>
     );
     // Green safe (col 8, row 2)
     squares.push(
-      <g key="safe-green">{renderStar(8 * CELL_SIZE + CELL_SIZE/2, 2 * CELL_SIZE + CELL_SIZE/2)}</g>
+      <g key="safe-green">{renderStar(8 * CELL_SIZE + CELL_SIZE / 2, 2 * CELL_SIZE + CELL_SIZE / 2)}</g>
     );
     // Yellow safe (col 12, row 8)
     squares.push(
-      <g key="safe-yellow">{renderStar(12 * CELL_SIZE + CELL_SIZE/2, 8 * CELL_SIZE + CELL_SIZE/2)}</g>
+      <g key="safe-yellow">{renderStar(12 * CELL_SIZE + CELL_SIZE / 2, 8 * CELL_SIZE + CELL_SIZE / 2)}</g>
     );
     // Blue safe (col 6, row 12)
     squares.push(
-      <g key="safe-blue">{renderStar(6 * CELL_SIZE + CELL_SIZE/2, 12 * CELL_SIZE + CELL_SIZE/2)}</g>
+      <g key="safe-blue">{renderStar(6 * CELL_SIZE + CELL_SIZE / 2, 12 * CELL_SIZE + CELL_SIZE / 2)}</g>
     );
 
     return squares;
@@ -426,7 +427,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           stroke="#333"
           strokeWidth="2"
         />
-        
+
         {/* Top triangle (Red) */}
         <polygon
           points={`${centerX},${centerY} ${6 * CELL_SIZE},${6 * CELL_SIZE} ${9 * CELL_SIZE},${6 * CELL_SIZE}`}
@@ -434,7 +435,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           stroke="#333"
           strokeWidth="1"
         />
-        
+
         {/* Right triangle (Green) */}
         <polygon
           points={`${centerX},${centerY} ${9 * CELL_SIZE},${6 * CELL_SIZE} ${9 * CELL_SIZE},${9 * CELL_SIZE}`}
@@ -442,7 +443,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           stroke="#333"
           strokeWidth="1"
         />
-        
+
         {/* Bottom triangle (Yellow) */}
         <polygon
           points={`${centerX},${centerY} ${9 * CELL_SIZE},${9 * CELL_SIZE} ${6 * CELL_SIZE},${9 * CELL_SIZE}`}
@@ -450,7 +451,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           stroke="#333"
           strokeWidth="1"
         />
-        
+
         {/* Left triangle (Blue) */}
         <polygon
           points={`${centerX},${centerY} ${6 * CELL_SIZE},${9 * CELL_SIZE} ${6 * CELL_SIZE},${6 * CELL_SIZE}`}
@@ -467,16 +468,16 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
       <svg viewBox="0 0 600 600" className="board-svg">
         {/* Board background */}
         <rect x="0" y="0" width={BOARD_SIZE} height={BOARD_SIZE} fill="#f5f5dc" stroke="#333" strokeWidth="3" />
-        
+
         {/* Corner home bases */}
         {renderHomeBase(0, 0, COLORS.red, 'red')}
         {renderHomeBase(BOARD_SIZE - HOME_BASE_SIZE, 0, COLORS.green, 'green')}
         {renderHomeBase(0, BOARD_SIZE - HOME_BASE_SIZE, COLORS.blue, 'blue')}
         {renderHomeBase(BOARD_SIZE - HOME_BASE_SIZE, BOARD_SIZE - HOME_BASE_SIZE, COLORS.yellow, 'yellow')}
-        
+
         {/* Main track and home columns */}
         {renderMainTrack()}
-        
+
         {/* Center home area */}
         {renderCenterHome()}
       </svg>
@@ -545,6 +546,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
           ))}
         </div>
       )}
+      {children}
     </div>
   );
 }

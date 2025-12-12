@@ -59,8 +59,10 @@ export default function Dice({ value, isRolling = false, show = true }: DiceProp
           <div className="dice-face bottom">{renderDots(displayValue)}</div>
         </div>
       </div>
-      {showResult && value > 0 && (
-        <div className="dice-value-display">{value}</div>
+      {(showResult && value > 0 || isRolling) && (
+        <div key={showResult ? 'result' : 'rolling'} className="dice-value-display">
+          {showResult ? value : "..."}
+        </div>
       )}
     </div>
   );

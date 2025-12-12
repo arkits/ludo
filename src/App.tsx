@@ -83,8 +83,8 @@ function App() {
             <h1 className="logo logo-link" onClick={handleLogoClick}>Ludo</h1>
             <div className="room-info">
               <span>Room: {state.room.roomId}</span>
-              <button 
-                className="copy-link-btn-header" 
+              <button
+                className="copy-link-btn-header"
                 onClick={() => {
                   if (state.room) {
                     const url = new URL(window.location.href);
@@ -146,12 +146,13 @@ function App() {
                 currentPlayerColor={state.room.currentPlayer?.color || null}
                 validMoves={validMoves}
                 onTokenClick={handleTokenClick}
-              />
-              {(state.isRollingDice || state.room.hasRolledDice) && (
-                <div className="dice-container">
-                  <Dice value={state.room.diceValue} isRolling={state.isRollingDice} show={true} />
-                </div>
-              )}
+              >
+                {(state.isRollingDice || state.room.hasRolledDice) && (
+                  <div className="dice-container">
+                    <Dice value={state.room.diceValue} isRolling={state.isRollingDice} show={true} />
+                  </div>
+                )}
+              </GameBoard>
               <GameControls
                 hasRolledDice={state.room.hasRolledDice}
                 isPlayerTurn={state.room.isPlayerTurn}
@@ -159,15 +160,15 @@ function App() {
                 canEndTurn={
                   state.room.currentPlayer
                     ? canEndTurn(
-                        state.room.currentPlayer,
-                        state.room.diceValue,
-                        state.room.hasRolledDice
-                      )
+                      state.room.currentPlayer,
+                      state.room.diceValue,
+                      state.room.hasRolledDice
+                    )
                     : false
                 }
                 onRollDice={handleRollDice}
                 onEndTurn={handleEndTurn}
-                onStartGame={() => {}}
+                onStartGame={() => { }}
                 gameState="playing"
                 isRoomCreator={false}
                 canStartGame={false}
@@ -188,7 +189,7 @@ function App() {
           </div>
         )}
       </div>
-      </div>
+    </div>
   );
 }
 
