@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@vercel/analytics": "^1.6.1",
     "bcryptjs": "^3.0.3",
     "convex": "^1.30.0",
     "react": "^19.2.0",
