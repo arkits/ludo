@@ -169,6 +169,7 @@ function App() {
                 gameState="playing"
                 isRoomCreator={false}
                 canStartGame={false}
+                currentPlayerColor={state.room.currentPlayer?.color}
               />
             </div>
           </div>

@@ -17,6 +17,7 @@ interface GameControlsProps {
   gameState: 'waiting' | 'playing' | 'finished';
   isRoomCreator: boolean;
   canStartGame: boolean;
+  currentPlayerColor?: string;
 }
 
 export default function GameControls({
@@ -32,7 +33,8 @@ export default function GameControls({
   onMoveToken,
   gameState,
   isRoomCreator,
-  canStartGame
+  canStartGame,
+  currentPlayerColor
 }: GameControlsProps) {
   const [opponentRolling, setOpponentRolling] = useState(false);
   const [autoMoveEnabled, setAutoMoveEnabled] = useState(false);
@@ -138,7 +140,7 @@ export default function GameControls({
   }
 
   return (
-    <div className="game-controls playing">
+    <div className={`game-controls playing ${currentPlayerColor ? `tint-${currentPlayerColor}` : ''}`}>
       <div className="controls-content">
         <div className="dice-section">
           <Dice value={diceValue} isRolling={isRollingDice || opponentRolling} show={true} />
