@@ -8,7 +8,8 @@ interface DiceProps {
 }
 
 export default function Dice({ value, isRolling = false, show = true }: DiceProps) {
-  const [displayValue, setDisplayValue] = useState(value);
+  // Use value or 1 default for display (to avoid empty face)
+  const [displayValue, setDisplayValue] = useState(value || 1);
   const [animationComplete, setAnimationComplete] = useState(true);
 
   // Separate effect for rolling animation
@@ -25,7 +26,7 @@ export default function Dice({ value, isRolling = false, show = true }: DiceProp
 
   // Separate effect to handle animation completion
   const handleAnimationEnd = useCallback(() => {
-    setDisplayValue(value);
+    setDisplayValue(value || 1);
     setAnimationComplete(true);
   }, [value]);
 

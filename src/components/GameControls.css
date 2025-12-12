@@ -1,157 +1,69 @@
 .game-controls {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 24px;
+  flex-shrink: 0;
+  width: 100%;
+  padding: 12px 16px;
   position: relative;
+  z-index: 10;
   background:
     url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"),
     linear-gradient(135deg,
       #e8d4b8 0%,
-      #d4b896 25%,
-      #c9a882 50%,
-      #d4b896 75%,
+      #d4b896 50%,
       #e0c9a6 100%);
   background-blend-mode: overlay, normal;
-  clip-path: polygon(0% 2%, 3% 0%, 6% 2%, 10% 0%, 14% 2%, 18% 0%,
-      82% 0%, 86% 2%, 90% 0%, 94% 2%, 97% 0%, 100% 2%,
-      100% 98%, 97% 100%, 94% 98%, 90% 100%, 86% 98%, 82% 100%,
-      18% 100%, 14% 98%, 10% 100%, 6% 98%, 3% 100%, 0% 98%);
-  box-shadow:
-    0 6px 24px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  flex-shrink: 0;
-  min-height: auto;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
 }
 
 
-.control-buttons {
+
+.controls-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.dice-section {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  /* background: rgba(255, 255, 255, 0.2); */
+  border-radius: 50%;
+}
+
+.actions-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  width: 100%;
-  max-width: 220px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  max-width: 280px;
 }
 
-.dice-help-text {
-  text-align: center;
-  color: #8b6f47;
-  font-size: 12px;
-  margin: 0;
-  font-weight: 400;
+.action-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.instruction-text {
   font-family: 'Crimson Text', serif;
-  opacity: 0.7;
-}
-
-.dice-help-text kbd {
-  display: inline-block;
-  padding: 2px 6px;
-  font-size: 11px;
-  line-height: 1.4;
-  color: #5c3d2e;
-  background-color: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(139, 111, 71, 0.3);
-  border-radius: 3px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  font-family: 'Courier New', monospace;
-  font-weight: 600;
-}
-
-.roll-dice-btn,
-.end-turn-btn,
-.start-game-btn {
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: 'Crimson Text', serif;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  box-shadow:
-    0 4px 8px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-}
-
-.roll-dice-btn {
-  background: linear-gradient(180deg,
-      #5c3d2e 0%,
-      #4a2f1a 50%,
-      #3d2817 100%);
-  color: #f5e6d3;
-  border: 3px solid #8b6f47;
-}
-
-.roll-dice-btn:hover:not(:disabled) {
-  background: linear-gradient(180deg,
-      #6d4a3a 0%,
-      #5c3d2e 50%,
-      #4a2f1a 100%);
-  transform: translateY(-2px);
-  box-shadow:
-    0 6px 16px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.roll-dice-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.roll-dice-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.end-turn-btn {
-  background: linear-gradient(180deg,
-      #4a8b6f 0%,
-      #3d7a5f 50%,
-      #2d5a45 100%);
-  color: white;
-  border: 3px solid #2d5a45;
-}
-
-.end-turn-btn:hover:not(:disabled) {
-  background: linear-gradient(180deg,
-      #5a9b7f 0%,
-      #4a8b6f 50%,
-      #3d7a5f 100%);
-  transform: translateY(-2px);
-  box-shadow:
-    0 6px 16px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
-}
-
-.end-turn-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.start-game-btn {
-  background: linear-gradient(180deg,
-      #5c3d2e 0%,
-      #4a2f1a 50%,
-      #3d2817 100%);
-  color: #f5e6d3;
-  border: 3px solid #8b6f47;
-  font-size: 18px;
-  padding: 16px 32px;
-}
-
-.start-game-btn:hover {
-  background: linear-gradient(180deg,
-      #6d4a3a 0%,
-      #5c3d2e 50%,
-      #4a2f1a 100%);
-  transform: translateY(-2px);
-  box-shadow:
-    0 6px 16px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.start-game-btn:active {
-  transform: translateY(0);
+  color: #5c3d2e;
+  margin: 0;
+  text-align: center;
+  animation: slideUp 0.3s ease-out;
 }
 
 .waiting-message,
@@ -163,30 +75,181 @@
   margin: 0;
   font-weight: 500;
   font-family: 'Crimson Text', serif;
-  padding: 12px 20px;
-  background: rgba(255, 255, 255, 0.4);
-  border-radius: 6px;
-  border: 1px solid rgba(139, 111, 71, 0.2);
 }
 
-.game-finished {
-  color: #5d4037;
+.roll-dice-btn,
+.end-turn-btn,
+.start-game-btn {
+  padding: 12px 24px;
+  border-radius: 50px;
+  /* Pill shape */
+  font-size: 16px;
   font-weight: 700;
-  font-size: 24px;
-  font-family: 'Playfair Display', serif;
-  background: rgba(212, 165, 116, 0.2);
-  border-color: #d4a574;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  font-family: 'Crimson Text', serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  border: none;
+  min-width: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.roll-dice-btn {
+  background: #5c3d2e;
+  color: #f5e6d3;
+  border: 2px solid #8b6f47;
+}
+
+.roll-dice-btn:hover:not(:disabled) {
+  background: #6d4a3a;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.25);
+}
+
+.roll-dice-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.roll-dice-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.end-turn-btn {
+  background: #2d5a45;
+  color: white;
+  border: 2px solid #3d7a5f;
+}
+
+.end-turn-btn:hover {
+  background: #3d7a5f;
+  transform: translateY(-2px);
+}
+
+.key-hint {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-family: monospace;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+}
+
+.dice-help-text {
+  display: none;
+  /* Hide old text if present */
+}
+
+.dice-help-text kbd {
+  background: rgba(255, 255, 255, 0.5);
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  font-weight: bold;
+}
+
+/* Toggle Switch */
+.auto-move-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  /* background: rgba(255, 255, 255, 0.5); */
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 18px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked+.slider {
+  background-color: #5c3d2e;
+}
+
+input:checked+.slider:before {
+  transform: translateX(14px);
+}
+
+.toggle-label {
+  font-size: 12px;
+  color: #5d4037;
+  font-weight: 600;
+  font-family: 'Crimson Text', serif;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 480px) {
   .game-controls {
-    padding: 24px 20px;
+    padding: 8px 12px;
+    min-height: 100px;
+  }
+
+  .controls-content {
+    gap: 16px;
+  }
+
+  .instruction-text {
+    font-size: 16px;
   }
 
   .roll-dice-btn,
-  .end-turn-btn,
-  .start-game-btn {
+  .end-turn-btn {
+    padding: 10px 20px;
+    min-width: 120px;
     font-size: 14px;
-    padding: 12px 20px;
   }
 }

@@ -5,7 +5,6 @@ import PlayerPanel from './components/PlayerPanel';
 import GameControls from './components/GameControls';
 import WaitingRoom from './components/WaitingRoom';
 import MoveHistory from './components/MoveHistory';
-import Dice from './components/Dice';
 import { canEndTurn } from './utils/gameLogic';
 import './App.css';
 
@@ -147,16 +146,13 @@ function App() {
                 validMoves={validMoves}
                 onTokenClick={handleTokenClick}
               >
-                {(state.isRollingDice || state.room.hasRolledDice) && (
-                  <div className="dice-container">
-                    <Dice value={state.room.diceValue} isRolling={state.isRollingDice} show={true} />
-                  </div>
-                )}
               </GameBoard>
               <GameControls
                 hasRolledDice={state.room.hasRolledDice}
                 isPlayerTurn={state.room.isPlayerTurn}
                 isRollingDice={state.isRollingDice}
+                diceValue={state.room.diceValue}
+                validMoves={validMoves}
                 canEndTurn={
                   state.room.currentPlayer
                     ? canEndTurn(
@@ -169,6 +165,7 @@ function App() {
                 onRollDice={handleRollDice}
                 onEndTurn={handleEndTurn}
                 onStartGame={() => { }}
+                onMoveToken={(tokenId) => moveToken(tokenId)}
                 gameState="playing"
                 isRoomCreator={false}
                 canStartGame={false}
