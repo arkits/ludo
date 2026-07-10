@@ -57,8 +57,9 @@ export default function CameraRig({ activeCorner, reducedMotion }: Props) {
       el.removeEventListener('pointerdown', down);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      if (camera instanceof THREE.PerspectiveCamera) camera.clearViewOffset();
     };
-  }, [gl]);
+  }, [gl, camera]);
 
   useFrame((_, dt) => {
     t.current += dt;
@@ -68,7 +69,7 @@ export default function CameraRig({ activeCorner, reducedMotion }: Props) {
     // which is the constraint on landscape screens; widen for portrait.
     const fovRad = (36 * Math.PI) / 180;
     const fit = 8.6 / Math.tan(fovRad / 2) / 2; // ≈ 13.2 at target, doubled margin below
-    const dist = aspect > 1 ? fit * 2.2 : (fit * 2.2) / Math.min(aspect * 1.15, 1);
+    const dist = aspect > 1 ? fit * 1.95 : (fit * 1.95) / Math.min(aspect * 1.15, 1);
     const idle =
       reducedMotion || drag.current.active ? 0 : Math.sin(t.current * 0.25) * 0.045;
     // Nudge toward active player's corner.
@@ -81,9 +82,18 @@ export default function CameraRig({ activeCorner, reducedMotion }: Props) {
       Math.cos(targetAz) * Math.sin(po) * dist + corner[1] * 0.6
     );
     camera.position.lerp(target, reducedMotion ? 1 : Math.min(1, dt * 2.5));
-    // Look slightly below board center so the board renders higher in the
-    // viewport, clear of the floating controls bar docked at the bottom.
-    camera.lookAt(0, 0, -0.4);
+    camera.lookAt(0, 0, 0);
+
+    // Pixel-space pan: shift the rendered frame up so the board sits higher
+    // in the viewport, clear of the floating controls bar docked at the
+    // bottom. Unlike nudging the lookAt target, this shift is exact in
+    // screen pixels regardless of camera distance or aspect ratio.
+    if (camera instanceof THREE.PerspectiveCamera) {
+      const shiftPx = Math.round(size.height * 0.1);
+      const fullHeight = size.height + shiftPx;
+      camera.setViewOffset(size.width, fullHeight, 0, shiftPx, size.width, size.height);
+      camera.updateProjectionMatrix();
+    }
   });
 
   return null;
