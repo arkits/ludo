@@ -1,8 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import './GameControls.css';
 
-import Dice from './Dice';
-
 interface GameControlsProps {
   hasRolledDice: boolean;
   isPlayerTurn: boolean;
@@ -144,8 +142,8 @@ export default function GameControls({
   return (
     <div className={`game-controls playing ${currentPlayerColor ? `tint-${currentPlayerColor}` : ''}`}>
       <div className="controls-content">
-        <div className="dice-section">
-          <Dice value={diceValue} isRolling={isRollingDice || opponentRolling} show={true} />
+        <div className="dice-result" aria-live="polite">
+          {isRollingDice || opponentRolling ? '…' : diceValue > 0 ? diceValue : '–'}
         </div>
 
         <div className="actions-section">

@@ -5,6 +5,11 @@ import { rollDice, moveToken, checkWin, getValidMoves, chooseBotMove } from "./g
 import { canRollDice, canMoveToken, canEndTurn } from "./validators";
 import type { Player } from "./gameLogic";
 
+// Bot pacing: slow enough that humans can follow the dice roll, the token
+// animation, and the turn handoff on the client.
+const BOT_HANDOFF_MS = 1500; // delay before a bot starts (or continues) its turn
+const BOT_ACTION_MS = 2000; // delay between a bot's roll and its move
+
 /**
  * Roll dice for current player
  */
@@ -77,7 +82,7 @@ export const rollDiceMutation = mutation({
         // Schedule bot play if next player is a bot
         const nextPlayer = players[nextPlayerIndex];
         if (nextPlayer && (nextPlayer.isBot ?? false)) {
-          await ctx.scheduler.runAfter(800, internal.game.botPlay, {
+          await ctx.scheduler.runAfter(BOT_HANDOFF_MS, internal.game.botPlay, {
             roomId: args.roomId,
           });
         }
@@ -230,7 +235,7 @@ export const moveTokenMutation = mutation({
         });
         // If current player is a bot, schedule another roll
         if (currentPlayerDoc.isBot ?? false) {
-          await ctx.scheduler.runAfter(800, internal.game.botPlay, {
+          await ctx.scheduler.runAfter(BOT_HANDOFF_MS, internal.game.botPlay, {
             roomId: args.roomId,
           });
         }
@@ -246,7 +251,7 @@ export const moveTokenMutation = mutation({
         // Schedule bot play if next player is a bot
         const nextPlayer = players[nextPlayerIndex];
         if (nextPlayer && (nextPlayer.isBot ?? false)) {
-          await ctx.scheduler.runAfter(800, internal.game.botPlay, {
+          await ctx.scheduler.runAfter(BOT_HANDOFF_MS, internal.game.botPlay, {
             roomId: args.roomId,
           });
         }
@@ -309,7 +314,7 @@ export const endTurn = mutation({
     // Schedule bot play if next player is a bot
     const nextPlayer = players[nextPlayerIndex];
     if (nextPlayer && (nextPlayer.isBot ?? false)) {
-      await ctx.scheduler.runAfter(800, internal.game.botPlay, {
+      await ctx.scheduler.runAfter(BOT_HANDOFF_MS, internal.game.botPlay, {
         roomId: args.roomId,
       });
     }
@@ -394,7 +399,7 @@ export const botPlay = internalMutation({
           // Schedule next bot if needed
           const nextPlayer = players[nextPlayerIndex];
           if (nextPlayer && (nextPlayer.isBot ?? false)) {
-            await ctx.scheduler.runAfter(800, internal.game.botPlay, {
+            await ctx.scheduler.runAfter(BOT_HANDOFF_MS, internal.game.botPlay, {
               roomId: args.roomId,
             });
           }
@@ -413,7 +418,7 @@ export const botPlay = internalMutation({
 
       if (!thirdSix) {
         // Schedule next bot action (move or end turn)
-        await ctx.scheduler.runAfter(1000, internal.game.botPlay, {
+        await ctx.scheduler.runAfter(BOT_ACTION_MS, internal.game.botPlay, {
           roomId: args.roomId,
         });
       }
@@ -436,7 +441,7 @@ export const botPlay = internalMutation({
       // Schedule next bot if needed
       const nextPlayer = players[nextPlayerIndex];
       if (nextPlayer && (nextPlayer.isBot ?? false)) {
-        await ctx.scheduler.runAfter(800, internal.game.botPlay, {
+        await ctx.scheduler.runAfter(BOT_HANDOFF_MS, internal.game.botPlay, {
           roomId: args.roomId,
         });
       }
@@ -515,7 +520,7 @@ export const botPlay = internalMutation({
         hasRolledDice: false,
       });
       // Schedule another roll
-      await ctx.scheduler.runAfter(800, internal.game.botPlay, {
+      await ctx.scheduler.runAfter(BOT_HANDOFF_MS, internal.game.botPlay, {
         roomId: args.roomId,
       });
     } else {
@@ -531,7 +536,7 @@ export const botPlay = internalMutation({
       // Schedule next bot if needed
       const nextPlayer = players[nextPlayerIndex];
       if (nextPlayer && (nextPlayer.isBot ?? false)) {
-        await ctx.scheduler.runAfter(800, internal.game.botPlay, {
+        await ctx.scheduler.runAfter(BOT_HANDOFF_MS, internal.game.botPlay, {
           roomId: args.roomId,
         });
       }
