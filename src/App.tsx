@@ -1,15 +1,22 @@
 import { useGame } from './hooks/useGame';
+import { useOpponentRolling } from './hooks/useOpponentRolling';
 import Lobby from './components/Lobby';
-import GameBoard from './components/GameBoard';
+import BoardScene from './components/three/BoardScene';
 import PlayerPanel from './components/PlayerPanel';
 import GameControls from './components/GameControls';
 import WaitingRoom from './components/WaitingRoom';
 import MoveHistory from './components/MoveHistory';
+import TurnBanner from './components/TurnBanner';
+import ScreenTransition from './components/ScreenTransition';
 import { canEndTurn } from './utils/gameLogic';
 import './App.css';
 
 function App() {
   const { state, createRoom, joinRoom, leaveRoom, startGame, rollDice, moveToken, endTurn, updatePlayer, addBot, removeBot } = useGame();
+  const opponentRolling = useOpponentRolling(
+    state.room?.hasRolledDice ?? false,
+    state.room?.isPlayerTurn ?? false
+  );
 
   const handleTokenClick = (playerId: string, tokenId: number) => {
     if (playerId === state.currentPlayerId && state.room?.isPlayerTurn) {
@@ -53,7 +60,9 @@ function App() {
   if (!state.room) {
     return (
       <div className="app">
-        <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} />
+        <ScreenTransition screenKey="lobby">
+          <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} />
+        </ScreenTransition>
         {state.error && (
           <div className="error-banner">
             {state.error}
@@ -112,6 +121,7 @@ function App() {
           </div>
         )}
 
+        <ScreenTransition screenKey={state.room.gameState}>
         {state.room.gameState === 'waiting' && (
           <WaitingRoom
             room={state.room}
@@ -156,13 +166,25 @@ function App() {
                   {state.room.currentPlayer.id === state.currentPlayerId && <span className="turn-you">Your turn</span>}
                 </div>
               )}
-              <GameBoard
-                players={state.room.players}
-                currentPlayerColor={state.room.currentPlayer?.color || null}
-                validMoves={validMoves}
-                onTokenClick={handleTokenClick}
-              >
-              </GameBoard>
+              <div className="board-stage">
+                {state.room.currentPlayer && (
+                  <TurnBanner
+                    key={state.room.currentPlayer.id}
+                    playerName={state.room.currentPlayer.nickname}
+                    color={state.room.currentPlayer.color}
+                    isYou={state.room.currentPlayer.id === state.currentPlayerId}
+                  />
+                )}
+                <BoardScene
+                  players={state.room.players}
+                  currentPlayerColor={state.room.currentPlayer?.color || null}
+                  validMoves={validMoves}
+                  onTokenClick={handleTokenClick}
+                  diceValue={state.room.diceValue}
+                  isRollingDice={state.isRollingDice || opponentRolling}
+                  activeCorner={state.room.currentPlayer?.color || null}
+                />
+              </div>
               <GameControls
                 hasRolledDice={state.room.hasRolledDice}
                 isPlayerTurn={state.room.isPlayerTurn}
@@ -202,6 +224,7 @@ function App() {
             </div>
           </div>
         )}
+        </ScreenTransition>
       </div>
     </div>
   );

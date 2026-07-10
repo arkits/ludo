@@ -29,14 +29,20 @@
   max-width: 600px;
 }
 
-.dice-section {
+.dice-result {
   flex-shrink: 0;
+  min-width: 52px;
+  height: 52px;
   display: flex;
-  justify-content: center;
   align-items: center;
-  padding: 10px;
-  /* background: rgba(255, 255, 255, 0.2); */
-  border-radius: 50%;
+  justify-content: center;
+  font-family: 'Bungee Inline', cursive;
+  font-size: 26px;
+  color: #f5e6d3;
+  background: linear-gradient(180deg, #5c3d2e, #3d2817);
+  border: 2px solid #8b6f47;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .actions-section {

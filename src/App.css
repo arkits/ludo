@@ -1,5 +1,6 @@
 .app {
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: transparent;
   display: flex;
@@ -476,6 +477,53 @@
 }
 .players-list { gap: 8px; margin-bottom: 0; }
 .game-main { gap: 10px; overflow: visible; justify-content: center; padding: 0 3px 10px; }
+
+/* Controls float over the board as a HUD element instead of eating stage height */
+.game-main {
+  position: relative;
+}
+
+.game-main .game-controls.playing {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  width: min(720px, calc(100% - 24px));
+}
+
+@media (max-width: 640px) {
+  .game-main .game-controls.playing {
+    bottom: 8px;
+    width: calc(100% - 12px);
+  }
+}
+
+/* Full-bleed 3D board stage */
+.board-stage {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.board-stage .webgl-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #decbb3;
+  font-family: 'Crimson Text', serif;
+  font-size: 18px;
+}
+
+@media (max-width: 1024px) {
+  .board-stage {
+    min-height: min(100vw, 68vh);
+  }
+}
 
 .turn-marquee {
   --turn-color: #d74a43;
