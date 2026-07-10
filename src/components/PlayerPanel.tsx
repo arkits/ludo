@@ -20,7 +20,7 @@ export default function PlayerPanel({ player, isCurrentTurn, isYou }: PlayerPane
           {isYou && <span className="you-badge">You</span>}
           {player.isBot && <span className="bot-badge">Bot</span>}
         </span>
-        {isCurrentTurn && <span className="turn-indicator">●</span>}
+        {isCurrentTurn && <span className="turn-indicator" aria-label="Current turn"><i /> LIVE</span>}
       </div>
       <div className="player-stats">
         <div className="stat">
@@ -35,4 +35,3 @@ export default function PlayerPanel({ player, isCurrentTurn, isYou }: PlayerPane
     </div>
   );
 }
-

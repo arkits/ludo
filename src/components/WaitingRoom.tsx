@@ -75,9 +75,13 @@ export default function WaitingRoom({
     <div className="waiting-room">
       {/* Header Section */}
       <div className="wr-header">
-        <h2>Waiting Room</h2>
+        <div className="wr-title-lockup">
+          <span className="wr-kicker">Ludo · Tabletop Edition</span>
+          <h2>Player Lounge</h2>
+        </div>
+        <div className="wr-lobby-state"><i /> Lobby open</div>
         <button className="wr-leave-btn" onClick={onLeaveRoom}>
-          Leave Room
+          <span>×</span> Leave Room
         </button>
       </div>
 
@@ -85,20 +89,23 @@ export default function WaitingRoom({
       <div className="wr-main-content">
         {/* Room Code Card */}
         <div className="wr-room-card">
-          <div className="wr-room-code-label">Room Code</div>
-          <div className="wr-room-code">{room.roomId}</div>
+          <div className="wr-room-copy">
+            <div className="wr-room-code-label">Invite code</div>
+            <div className="wr-room-code">{room.roomId}</div>
+            <p>Share this code with up to {room.maxPlayers - 1} challengers</p>
+          </div>
           <button 
             className={`wr-copy-btn ${copied ? 'copied' : ''}`} 
             onClick={copyRoomLink}
           >
-            {copied ? '✓ Copied!' : 'Copy Invite Link'}
+            {copied ? '✓ Link copied' : 'Copy invite link'}
           </button>
         </div>
 
         {/* Your Settings Card */}
         {currentPlayer && (
           <div className="wr-settings-card">
-            <h3>Your Settings</h3>
+            <div className="wr-card-heading"><span>01</span><h3>Your piece</h3></div>
             
             {/* Name Edit */}
             <div className="wr-setting-row">
@@ -166,7 +173,11 @@ export default function WaitingRoom({
 
         {/* Players List */}
         <div className="wr-players-card">
-          <h3>Players ({room.players.length}/{room.maxPlayers})</h3>
+          <div className="wr-card-heading">
+            <span>02</span>
+            <h3>Players</h3>
+            <div className="wr-player-count">{room.players.length}<small>/{room.maxPlayers}</small></div>
+          </div>
           <div className="wr-players-list">
             {room.players.map((player, index) => (
               <div 
@@ -215,7 +226,7 @@ export default function WaitingRoom({
       <div className="wr-actions">
         {room.players.length < 2 ? (
           <div className="wr-status">
-            Waiting for at least one more player to join...
+            <i /> Waiting for at least one more player to join
           </div>
         ) : isRoomCreator ? (
           <button 
@@ -227,7 +238,7 @@ export default function WaitingRoom({
           </button>
         ) : (
           <div className="wr-status">
-            Waiting for host to start the game...
+            <i /> Waiting for host to start the game
           </div>
         )}
       </div>

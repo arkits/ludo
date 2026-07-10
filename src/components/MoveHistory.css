@@ -191,3 +191,8 @@
   border-top: 1px solid rgba(139, 111, 71, 0.2);
   font-family: 'Crimson Text', serif;
 }
+
+.move-history { margin-top: 10px; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: rgba(255,255,255,.045); box-shadow: inset 0 1px #fff1; }
+.move-history-header { padding: 10px 12px; background: rgba(255,255,255,.045); border-color:#ffffff0d; }.move-history-header h3 { color:#d9c4a9; font-size:13px; letter-spacing:.06em; text-transform:uppercase; }
+.move-history-content { padding:8px; }.no-moves,.show-more-hint { color:#9e8870; }.move-entry { padding:9px; background:#ffffff0a; }.move-player-name { color:#e9d9c4; }.move-description { color:#bba58e; }
+@media(max-width:1024px){.move-history{max-height:220px}}

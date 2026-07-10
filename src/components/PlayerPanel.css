@@ -142,3 +142,14 @@
   color: #5d4037;
   font-family: 'Crimson Text', serif;
 }
+
+.player-panel { position: relative; margin: 0; padding: 11px 12px; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; color: #eadcc8; background: linear-gradient(145deg,rgba(255,255,255,.095),rgba(255,255,255,.035)); box-shadow: inset 0 1px #fff1; overflow: hidden; }
+.player-panel::before { content:""; position:absolute; inset:0 auto 0 0; width:3px; background:#777; opacity:.65; }
+.player-panel.player-red::before { background:#df4d48; }.player-panel.player-blue::before { background:#3498db; }.player-panel.player-green::before { background:#34ad62; }.player-panel.player-yellow::before { background:#f1bd21; }
+.player-panel.current-turn { transform: translateX(5px); border-color: rgba(255,211,144,.42); background: linear-gradient(145deg,rgba(255,245,220,.16),rgba(255,255,255,.055)); box-shadow: 0 9px 24px #0004,inset 0 1px #fff2; animation: player-arrives .55s cubic-bezier(.16,1,.3,1); }
+.player-header { margin-bottom: 7px; gap: 9px; }.player-name,.stat-value { color:#f4e7d4; }.stat-label { color:#ad9982; }.player-stats { padding-top:6px; gap:12px; border-color:#ffffff12; font-size:12px; }
+.player-color-indicator { width:23px;height:23px;border-width:2px; box-shadow:0 3px 0 #0005,0 5px 8px #0004,inset 0 2px 3px #fff6; }
+.turn-indicator { display:flex; align-items:center; gap:4px; color:#f4d19d; font:700 8px/1 'Crimson Text',serif; letter-spacing:.1em; text-shadow:none; animation:none; }.turn-indicator i { width:6px;height:6px;border-radius:50%;background:#e85c4f;box-shadow:0 0 8px #e85c4f;animation:pulse-glow 1.1s infinite; }
+.you-badge,.bot-badge { padding:2px 6px;font-size:8px;border-radius:4px; }
+@keyframes player-arrives { from { opacity:.45; transform:translateX(-8px) scale(.98); } }
+@media(max-width:640px){.player-panel{padding:8px}.player-header{margin:0}.player-stats{display:none}.player-name{font-size:13px}.player-color-indicator{width:19px;height:19px}.turn-indicator{font-size:0}.turn-indicator i{display:block}.you-badge,.bot-badge{display:none}}

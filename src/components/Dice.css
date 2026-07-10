@@ -7,6 +7,17 @@
   height: 80px;
 }
 
+.dice-wrapper { width: 96px; height: 86px; perspective: 900px; }
+.dice-3d { width: 62px; height: 62px; perspective: 900px; transform: rotateX(-7deg) rotateY(9deg); }
+.dice-face { background: linear-gradient(145deg,#fffef8 0%,#eee2cc 78%,#d4bea0 100%); border: 1px solid #8b6c4f; box-shadow: inset 3px 3px 7px #fff, inset -4px -4px 8px #bba98b99; }
+.dice-dot { background: radial-gradient(circle at 35% 30%,#593b2b,#1c0e08 70%); box-shadow: inset 1px 1px 2px #0009, 0 1px #fff8; }
+.dice-3d.rolling { animation: dice-hop .72s ease-in-out infinite; }
+.dice-3d.rolling .dice-cube { animation: realistic-roll .72s cubic-bezier(.4,.05,.2,1) infinite; }
+.dice-3d.settled .dice-cube { transform: rotateX(-8deg) rotateY(12deg); animation: dice-land .5s cubic-bezier(.16,1.4,.3,1); }
+@keyframes dice-hop { 0%,100% { transform: translateY(6px) rotateX(-7deg) rotateY(9deg); } 45% { transform: translateY(-19px) rotateX(-7deg) rotateY(9deg); } }
+@keyframes dice-land { from { transform: rotateX(-35deg) rotateY(45deg) scale(1.12); } }
+.dice-3d::after { bottom: -19px; width: 52px; height: 12px; background: radial-gradient(ellipse,#170b07aa,transparent 68%); filter: blur(2px); }
+
 .dice-3d {
   width: 60px;
   height: 60px;

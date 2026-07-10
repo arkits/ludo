@@ -103,7 +103,7 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
     ];
 
     return (
-      <g key={`home-${colorName}`}>
+      <g key={`home-${colorName}`} filter="url(#board-inset)">
         {/* Background */}
         <rect
           x={startX}
@@ -466,8 +466,18 @@ export default function GameBoard({ players, currentPlayerColor, validMoves, onT
   return (
     <div className="game-board">
       <svg viewBox="0 0 600 600" className="board-svg">
+        <defs>
+          <filter id="board-inset" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#27150a" floodOpacity=".28" />
+          </filter>
+          <linearGradient id="board-paper" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#fffdf4" />
+            <stop offset=".52" stopColor="#f7eedb" />
+            <stop offset="1" stopColor="#e6d5b7" />
+          </linearGradient>
+        </defs>
         {/* Board background */}
-        <rect x="0" y="0" width={BOARD_SIZE} height={BOARD_SIZE} fill="#f5f5dc" stroke="#333" strokeWidth="3" />
+        <rect x="0" y="0" width={BOARD_SIZE} height={BOARD_SIZE} fill="url(#board-paper)" stroke="#38261b" strokeWidth="3" />
 
         {/* Corner home bases */}
         {renderHomeBase(0, 0, COLORS.red, 'red')}

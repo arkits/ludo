@@ -63,11 +63,13 @@ export default function GameControls({
         clearTimeout(rollTimerRef.current);
       }
 
-      setOpponentRolling(true);
       rollTimerRef.current = setTimeout(() => {
-        setOpponentRolling(false);
-        rollTimerRef.current = null;
-      }, 1200);
+        setOpponentRolling(true);
+        rollTimerRef.current = setTimeout(() => {
+          setOpponentRolling(false);
+          rollTimerRef.current = null;
+        }, 1200);
+      }, 0);
     }
     prevHasRolledRef.current = hasRolledDice;
   }, [hasRolledDice, isPlayerTurn]);

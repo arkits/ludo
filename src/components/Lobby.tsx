@@ -49,10 +49,16 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
     <div className="lobby">
       <div className="lobby-content">
         <div className="lobby-container">
+          <div className="lobby-rail" aria-hidden="true"><span /><span /><span /><span /></div>
           {/* Logo */}
           <div className="logo-section">
+            <span className="logo-kicker">The classic race home</span>
             <h1 className="logo logo-clickable" onClick={() => window.location.href = '/'}>Ludo</h1>
-            <div className="logo-subtitle">Classic Board Game</div>
+            <div className="logo-subtitle">Tabletop Edition</div>
+            <div className="hero-pieces" aria-hidden="true">
+              <i className="piece piece-red" /><i className="piece piece-blue" />
+              <i className="piece piece-green" /><i className="piece piece-yellow" />
+            </div>
           </div>
           
           {/* Description */}
@@ -63,26 +69,27 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
           {/* Game features */}
           <div className="features-row">
             <div className="feature">
-              <span className="feature-icon">🎲</span>
+              <span className="feature-icon feature-die" aria-hidden="true"><i /><i /><i /></span>
               <span className="feature-text">Roll & Move</span>
             </div>
             <div className="feature">
-              <span className="feature-icon">👥</span>
+              <span className="feature-icon feature-players" aria-hidden="true"><i /><i /><i /></span>
               <span className="feature-text">2-4 Players</span>
             </div>
             <div className="feature">
-              <span className="feature-icon">🌐</span>
+              <span className="feature-icon feature-online" aria-hidden="true"><i /></span>
               <span className="feature-text">Play Online</span>
             </div>
           </div>
           
           {!action ? (
             <div className="lobby-actions">
+              <p className="action-heading">Choose your seat</p>
               <button 
                 className="lobby-action-btn lobby-action-btn-create"
                 onClick={() => setAction('create')}
               >
-                <span className="btn-icon">🏠</span>
+                <span className="btn-icon">＋</span>
                 Create Room
               </button>
               <div className="lobby-divider">
@@ -92,7 +99,7 @@ export default function Lobby({ onCreateRoom, onJoinRoom }: LobbyProps) {
                 className="lobby-action-btn lobby-action-btn-join"
                 onClick={() => setAction('join')}
               >
-                <span className="btn-icon">🚪</span>
+                <span className="btn-icon">→</span>
                 Join Room
               </button>
             </div>

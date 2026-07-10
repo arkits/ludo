@@ -79,7 +79,10 @@ function App() {
       <div className="game-container">
         {state.room.gameState !== 'waiting' && (
           <div className="game-header">
-            <h1 className="logo logo-link" onClick={handleLogoClick}>Ludo</h1>
+            <div className="brand-lockup">
+              <h1 className="logo logo-link" onClick={handleLogoClick}>Ludo</h1>
+              <span className="brand-edition">Tabletop</span>
+            </div>
             <div className="room-info">
               <span>Room: {state.room.roomId}</span>
               <button
@@ -122,7 +125,7 @@ function App() {
         )}
 
         {state.room.gameState === 'playing' && (
-          <div className="game-play">
+          <div className={`game-play turn-${state.room.currentPlayer?.color || 'red'}`}>
             <div className="game-sidebar">
               <div className="players-list">
                 {state.room.players.map((player) => (
@@ -140,6 +143,19 @@ function App() {
             </div>
 
             <div className="game-main">
+              {state.room.currentPlayer && (
+                <div
+                  key={state.room.currentPlayer.id}
+                  className={`turn-marquee player-${state.room.currentPlayer.color}`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span className="turn-marquee-dot" />
+                  <span className="turn-marquee-label">Now playing</span>
+                  <strong>{state.room.currentPlayer.nickname}</strong>
+                  {state.room.currentPlayer.id === state.currentPlayerId && <span className="turn-you">Your turn</span>}
+                </div>
+              )}
               <GameBoard
                 players={state.room.players}
                 currentPlayerColor={state.room.currentPlayer?.color || null}

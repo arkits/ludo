@@ -47,17 +47,25 @@ export default function Dice({ value, isRolling = false, show = true }: DiceProp
 
   // Only show result when animation is complete and not rolling
   const showResult = !isRolling && animationComplete;
+  const faceValues = [
+    displayValue,
+    7 - displayValue,
+    displayValue === 6 ? 1 : displayValue + 1,
+    displayValue === 1 ? 6 : displayValue - 1,
+    ((displayValue + 1) % 6) + 1,
+    ((displayValue + 3) % 6) + 1,
+  ];
 
   return (
     <div className="dice-wrapper">
       <div className={`dice-3d ${isRolling ? 'rolling' : 'settled'}`}>
         <div className="dice-cube">
-          <div className="dice-face front">{renderDots(displayValue)}</div>
-          <div className="dice-face back">{renderDots(displayValue)}</div>
-          <div className="dice-face right">{renderDots(displayValue)}</div>
-          <div className="dice-face left">{renderDots(displayValue)}</div>
-          <div className="dice-face top">{renderDots(displayValue)}</div>
-          <div className="dice-face bottom">{renderDots(displayValue)}</div>
+          <div className="dice-face front">{renderDots(faceValues[0])}</div>
+          <div className="dice-face back">{renderDots(faceValues[1])}</div>
+          <div className="dice-face right">{renderDots(faceValues[2])}</div>
+          <div className="dice-face left">{renderDots(faceValues[3])}</div>
+          <div className="dice-face top">{renderDots(faceValues[4])}</div>
+          <div className="dice-face bottom">{renderDots(faceValues[5])}</div>
         </div>
       </div>
       {(showResult && value > 0 || isRolling) && (
@@ -117,4 +125,3 @@ function getDiceDots(value: number): Array<{ row: number; col: number }> {
 
   return patterns[value] || [];
 }
-
