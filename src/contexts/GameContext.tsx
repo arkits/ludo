@@ -6,6 +6,11 @@ import type { GameRoom, Player } from '../types/game';
 import { calculateValidMoves } from '../utils/gameLogic';
 import type { Doc } from '../../convex/_generated/dataModel';
 
+// getRoom() never sends passwordHash/authToken to the client (see
+// convex/rooms.ts) - reflect that in the types we work with here.
+type SanitizedRoomDoc = Omit<Doc<"rooms">, "passwordHash">;
+type SanitizedPlayerDoc = Omit<Doc<"players">, "authToken">;
+
 // Generate or retrieve player ID
 function getOrCreatePlayerId(): string {
   let playerId = localStorage.getItem('ludo_playerId');
@@ -14,6 +19,22 @@ function getOrCreatePlayerId(): string {
     localStorage.setItem('ludo_playerId', playerId);
   }
   return playerId;
+}
+
+// Per-player auth tokens are issued by createRoom/joinRoom and must be sent
+// with every subsequent mutation so the server can verify the caller is
+// actually the player they claim to be (playerId alone is visible to every
+// room member and is not a secret).
+function authTokenStorageKey(roomId: string, playerId: string): string {
+  return `ludo_authToken_${roomId}_${playerId}`;
+}
+
+function getStoredAuthToken(roomId: string, playerId: string): string | undefined {
+  return localStorage.getItem(authTokenStorageKey(roomId, playerId)) ?? undefined;
+}
+
+function storeAuthToken(roomId: string, playerId: string, token: string): void {
+  localStorage.setItem(authTokenStorageKey(roomId, playerId), token);
 }
 
 interface GameState {
@@ -82,8 +103,8 @@ const initialState: GameState = {
 
 // Transform Convex data to GameRoom format
 function transformRoomData(
-  roomData: Doc<"rooms"> | null | undefined,
-  players: Doc<"players">[] | null | undefined,
+  roomData: SanitizedRoomDoc | null | undefined,
+  players: SanitizedPlayerDoc[] | null | undefined,
   currentPlayerId: string | null
 ): GameRoom | null {
   if (!roomData || !players) return null;
@@ -129,6 +150,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const roomIdFromUrl = urlParams.get('room');
   const currentRoomId = state.roomId || roomIdFromUrl;
 
+  // Auth token for the current room+player. Initialized lazily (covers
+  // reconnecting via a room URL, where currentRoomId is already known on
+  // first render) and otherwise updated directly - and synchronously, not
+  // from an effect - whenever createRoom/joinRoom issue a fresh token.
+  const [authToken, setAuthToken] = useState<string | undefined>(() =>
+    currentRoomId ? getStoredAuthToken(currentRoomId, playerId) : undefined
+  );
+
   // Query room data
   const roomData = useQuery(
     api.rooms.getRoom,
@@ -150,6 +179,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // Refs for functions to avoid dependency issues
   const endTurnRef = useRef<(() => Promise<void>) | null>(null);
   const joinRoomRef = useRef<((roomId: string, nickname: string, password?: string) => Promise<void>) | null>(null);
+
+  // Auto-end-turn scheduling guards: `autoEndKeyRef` records which
+  // (room, player, dice) combination we've already scheduled an auto-end
+  // for, so re-renders that don't actually change that combination don't
+  // schedule duplicate endTurn calls. `autoEndTimeoutRef` lets us cancel a
+  // pending auto-end if the underlying state moves on before it fires.
+  const autoEndKeyRef = useRef<string | null>(null);
+  const autoEndTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Set current player ID
   useEffect(() => {
@@ -179,17 +216,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       // Calculate valid moves for current player (only if player is in room)
       if (isPlayerInRoom && transformed && transformed.isPlayerTurn && transformed.currentPlayer && transformed.hasRolledDice) {
-        const validMoves = calculateValidMoves(transformed.currentPlayer, transformed.diceValue);
+        const validMoves = calculateValidMoves(transformed.players, transformed.currentPlayer, transformed.diceValue);
         dispatch({ type: 'SET_VALID_MOVES', payload: validMoves });
-
-        // Auto-end turn if no valid moves
-        if (validMoves.length === 0 && transformed.diceValue !== 6) {
-          setTimeout(() => {
-            if (transformed && endTurnRef.current) {
-              endTurnRef.current();
-            }
-          }, 1500);
-        }
       } else {
         dispatch({ type: 'SET_VALID_MOVES', payload: [] });
       }
@@ -197,7 +225,61 @@ export function GameProvider({ children }: { children: ReactNode }) {
       // Room query returned null but we have a roomId - room might not exist
       dispatch({ type: 'SET_ROOM', payload: null });
     }
-  }, [roomData, playerId, currentRoomId, endTurnRef, roomIdFromUrl, state.roomId]);
+  }, [roomData, playerId, currentRoomId, roomIdFromUrl, state.roomId]);
+
+  // Auto-end-turn: if it's our turn, we've rolled, and there are no valid
+  // moves (and we didn't roll a 6, which always grants another roll), end
+  // the turn automatically after a short delay. Depending only on the
+  // primitive values below (rather than the whole `roomData` object) means
+  // this effect only re-runs when they actually change, and the key/ref
+  // guard plus cleanup below prevent scheduling duplicate endTurn calls.
+  const room = state.room;
+  const autoEndRoomId = room?.roomId ?? null;
+  const autoEndPlayerIndex = room?.currentPlayerIndex ?? null;
+  const autoEndDiceValue = room?.diceValue ?? null;
+  const autoEndIsPlayerTurn = room?.isPlayerTurn ?? false;
+  const autoEndHasRolledDice = room?.hasRolledDice ?? false;
+  const autoEndValidMovesCount = state.validMoves.length;
+
+  useEffect(() => {
+    const shouldAutoEnd =
+      autoEndIsPlayerTurn &&
+      autoEndHasRolledDice &&
+      autoEndRoomId !== null &&
+      autoEndPlayerIndex !== null &&
+      autoEndDiceValue !== null &&
+      autoEndDiceValue !== 6 &&
+      autoEndValidMovesCount === 0;
+
+    if (!shouldAutoEnd) {
+      return;
+    }
+
+    const key = `${autoEndRoomId}:${autoEndPlayerIndex}:${autoEndDiceValue}`;
+    if (autoEndKeyRef.current === key) {
+      // Already scheduled for this exact state.
+      return;
+    }
+    autoEndKeyRef.current = key;
+
+    autoEndTimeoutRef.current = setTimeout(() => {
+      endTurnRef.current?.();
+    }, 1500);
+
+    return () => {
+      if (autoEndTimeoutRef.current !== null) {
+        clearTimeout(autoEndTimeoutRef.current);
+        autoEndTimeoutRef.current = null;
+      }
+    };
+  }, [
+    autoEndRoomId,
+    autoEndPlayerIndex,
+    autoEndDiceValue,
+    autoEndIsPlayerTurn,
+    autoEndHasRolledDice,
+    autoEndValidMovesCount,
+  ]);
 
   const createRoom = useCallback(async (nickname: string, password?: string) => {
     try {
@@ -214,6 +296,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       });
 
       if (result.roomId) {
+        storeAuthToken(result.roomId, playerId, result.authToken);
+        setAuthToken(result.authToken);
         dispatch({ type: 'SET_ROOM_ID', payload: result.roomId });
         // Update URL
         const url = new URL(window.location.href);
@@ -250,6 +334,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       });
 
       if (result.success) {
+        storeAuthToken(roomId.toUpperCase(), playerId, result.authToken);
+        setAuthToken(result.authToken);
         dispatch({ type: 'SET_ROOM_ID', payload: roomId.toUpperCase() });
         // Update URL
         const url = new URL(window.location.href);
@@ -282,6 +368,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       await leaveRoomMutation({
         roomId: state.roomId,
         playerId,
+        authToken,
       });
 
       dispatch({ type: 'CLEAR_ROOM' });
@@ -296,7 +383,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_ERROR', payload: null });
       }, 5000);
     }
-  }, [leaveRoomMutation, state.roomId, playerId]);
+  }, [leaveRoomMutation, state.roomId, playerId, authToken]);
 
   const startGame = useCallback(async () => {
     if (!state.roomId) return;
@@ -305,6 +392,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const result = await startGameMutation({
         roomId: state.roomId,
         playerId,
+        authToken,
       });
 
       if (!result.success) {
@@ -320,7 +408,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_ERROR', payload: null });
       }, 5000);
     }
-  }, [startGameMutation, state.roomId, playerId]);
+  }, [startGameMutation, state.roomId, playerId, authToken]);
 
   const rollDice = useCallback(async () => {
     if (!state.roomId) return;
@@ -332,6 +420,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const result = await rollDiceMutation({
         roomId: state.roomId,
         playerId,
+        authToken,
       });
 
       // Stop rolling animation after a delay (simulate server delay)
@@ -345,6 +434,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setTimeout(() => {
           dispatch({ type: 'SET_ERROR', payload: null });
         }, 5000);
+      } else if (result.thirdSix) {
+        dispatch({ type: 'SET_ERROR', payload: 'Three sixes in a row — turn forfeited' });
+        setTimeout(() => {
+          dispatch({ type: 'SET_ERROR', payload: null });
+        }, 5000);
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -354,7 +448,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_ERROR', payload: null });
       }, 5000);
     }
-  }, [rollDiceMutation, state.roomId, playerId]);
+  }, [rollDiceMutation, state.roomId, playerId, authToken]);
 
   const moveToken = useCallback(async (tokenId: number) => {
     if (!state.roomId) return;
@@ -364,6 +458,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         roomId: state.roomId,
         playerId,
         tokenId,
+        authToken,
       });
 
       if (!result.success) {
@@ -382,7 +477,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_ERROR', payload: null });
       }, 5000);
     }
-  }, [moveTokenMutation, state.roomId, playerId]);
+  }, [moveTokenMutation, state.roomId, playerId, authToken]);
 
   const endTurn = useCallback(async () => {
     if (!state.roomId) return;
@@ -391,6 +486,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const result = await endTurnMutation({
         roomId: state.roomId,
         playerId,
+        authToken,
       });
 
       if (!result.success) {
@@ -409,7 +505,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_ERROR', payload: null });
       }, 5000);
     }
-  }, [endTurnMutation, state.roomId, playerId]);
+  }, [endTurnMutation, state.roomId, playerId, authToken]);
 
   // Update ref
   useEffect(() => {
@@ -425,6 +521,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         playerId,
         nickname,
         color,
+        authToken,
       });
 
       if (!result.success) {
@@ -445,7 +542,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_ERROR', payload: null });
       }, 5000);
     }
-  }, [updatePlayerMutation, state.roomId, playerId]);
+  }, [updatePlayerMutation, state.roomId, playerId, authToken]);
 
   const addBot = useCallback(async () => {
     if (!state.roomId) return;
@@ -454,6 +551,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const result = await addBotMutation({
         roomId: state.roomId,
         playerId,
+        authToken,
       });
 
       if (!result.success) {
@@ -469,7 +567,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_ERROR', payload: null });
       }, 5000);
     }
-  }, [addBotMutation, state.roomId, playerId]);
+  }, [addBotMutation, state.roomId, playerId, authToken]);
 
   const removeBot = useCallback(async (botPlayerId: string) => {
     if (!state.roomId) return;
@@ -479,6 +577,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         roomId: state.roomId,
         playerId,
         botPlayerId,
+        authToken,
       });
 
       if (!result.success) {
@@ -494,7 +593,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_ERROR', payload: null });
       }, 5000);
     }
-  }, [removeBotMutation, state.roomId, playerId]);
+  }, [removeBotMutation, state.roomId, playerId, authToken]);
 
   return (
     <GameContext.Provider

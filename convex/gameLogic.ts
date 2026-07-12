@@ -163,27 +163,29 @@ export function isPathBlocked(
 ): boolean {
   // Only check blocks on main track
   if (fromPosition < 0 || fromPosition >= 52) return false;
-  
+
+  // If the move enters the home column, the main-track portion of the path
+  // ends at this color's HOME_ENTRY square (the last square before turning
+  // into the home column). Blocks don't exist inside the home column.
+  const boardEndPosition = toPosition >= 52 ? HOME_ENTRY[player.color] : toPosition;
+
   // Calculate the number of steps (accounting for wrap-around)
-  const steps = toPosition >= fromPosition 
-    ? toPosition - fromPosition 
-    : (52 - fromPosition) + toPosition;
-  
+  const steps = boardEndPosition >= fromPosition
+    ? boardEndPosition - fromPosition
+    : (52 - fromPosition) + boardEndPosition;
+
   // Check each position along the path (excluding start, including end)
   for (let i = 1; i <= steps; i++) {
     const checkPos = (fromPosition + i) % 52;
-    
-    // If we're entering home column, stop checking main track
-    if (checkPos === toPosition && toPosition >= 52) break;
-    
+
     const { hasBlock: blocked, blockingPlayerId } = hasBlock(players, checkPos);
-    
+
     // Can pass through own blocks, but not opponents'
     if (blocked && blockingPlayerId !== player.playerId) {
       return true;
     }
   }
-  
+
   return false;
 }
 
@@ -196,13 +198,17 @@ export function wouldJumpOwnTokenInHomeColumn(
   fromPosition: number,
   toPosition: number
 ): boolean {
-  // Only applies in home column (positions 52-57)
-  if (fromPosition < 52 || toPosition < 52) return false;
-  
-  const fromHomePos = fromPosition - 52;
+  // Only relevant when the destination is in the home column (positions 52-57)
+  if (toPosition < 52) return false;
+
+  // fromPosition may be a main-track square (< 52) when a token is entering
+  // the home column for the first time - in that case there's no "from"
+  // square inside the home column yet, so treat it as position -1 (i.e.
+  // check every home-column square strictly before the destination).
+  const fromHomePos = fromPosition >= 52 ? fromPosition - 52 : -1;
   const toHomePos = toPosition - 52;
-  
-  // Check each position between from and to (exclusive of from, inclusive of to)
+
+  // Check each position between from and to (exclusive of from, exclusive of to)
   for (let pos = fromHomePos + 1; pos < toHomePos; pos++) {
     const absolutePos = 52 + pos;
     const tokenAtPos = player.tokens.find(
@@ -248,8 +254,10 @@ export function getValidMoves(
     const newPosition = calculateNewPosition(player.color, token.position, diceValue);
     if (newPosition === null) continue;
     
-    // Check if path is blocked by opponent's block (only on main track)
-    if (token.position < 52 && newPosition < 52) {
+    // Check if path is blocked by opponent's block. This also covers moves
+    // that enter the home column - the main-track squares up to and
+    // including the color's HOME_ENTRY square are still checked.
+    if (token.position < 52) {
       if (isPathBlocked(players, player, token.position, newPosition)) {
         continue; // Can't pass through opponent's block
       }
@@ -273,8 +281,7 @@ export function getValidMoves(
     // Check if entering home column and would jump over own pieces
     if (token.position < 52 && newPosition >= 52) {
       // When entering home column, check if any own token is in the way
-      const homeStartPos = 52;
-      if (wouldJumpOwnTokenInHomeColumn(player, token.id, homeStartPos - 1, newPosition)) {
+      if (wouldJumpOwnTokenInHomeColumn(player, token.id, token.position, newPosition)) {
         continue;
       }
     }
@@ -355,7 +362,7 @@ export function moveToken(
   tokenId: number,
   diceValue: number
 ): { updatedPlayer: Player; updatedPlayers: Player[]; captured: boolean } | null {
-  const token = player.tokens[tokenId];
+  const token = player.tokens.find((t) => t.id === tokenId);
   if (!token) return null;
 
   // Check if move is valid
@@ -475,7 +482,7 @@ export function chooseBotMove(
   const moveScores: { tokenId: number; score: number }[] = [];
   
   for (const tokenId of validMoves) {
-    const token = player.tokens[tokenId];
+    const token = player.tokens.find((t) => t.id === tokenId);
     if (!token) continue;
     
     let score = 0;

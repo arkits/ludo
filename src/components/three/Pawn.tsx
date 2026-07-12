@@ -127,11 +127,8 @@ export default function Pawn({
     const s = token.isFinished ? 0.7 : 1;
     g.scale.setScalar(THREE.MathUtils.lerp(g.scale.x, s, Math.min(1, dt * 6)));
     if (mat.current) {
-      const glow = clickable
-        ? 0.55 + Math.sin(clock.current * 4) * 0.25
-        : hovered && clickable
-          ? 0.4
-          : 0;
+      const pulse = 0.55 + Math.sin(clock.current * 4) * 0.25;
+      const glow = clickable ? (hovered ? 0.8 : pulse) : 0;
       mat.current.emissiveIntensity = THREE.MathUtils.lerp(
         mat.current.emissiveIntensity,
         glow,

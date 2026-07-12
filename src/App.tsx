@@ -33,6 +33,7 @@ function App() {
   const handleEndTurn = () => {
     if (state.room && state.room.currentPlayer) {
       const canEnd = canEndTurn(
+        state.room.players,
         state.room.currentPlayer,
         state.room.diceValue,
         state.room.hasRolledDice
@@ -194,6 +195,7 @@ function App() {
                 canEndTurn={
                   state.room.currentPlayer
                     ? canEndTurn(
+                      state.room.players,
                       state.room.currentPlayer,
                       state.room.diceValue,
                       state.room.hasRolledDice

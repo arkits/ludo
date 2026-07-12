@@ -54,6 +54,7 @@ export default defineSchema({
     isReady: v.boolean(),
     playerIndex: v.number(), // Order in which player joined (0 = creator)
     isBot: v.optional(v.boolean()), // Whether this player is a bot (defaults to false)
+    authToken: v.optional(v.string()), // Per-player secret used to authorize mutations for this player
   })
     .index("by_roomId", ["roomId"])
     .index("by_roomId_and_playerId", ["roomId", "playerId"]),

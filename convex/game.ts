@@ -2,13 +2,169 @@ import { mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { rollDice, moveToken, checkWin, getValidMoves, chooseBotMove } from "./gameLogic";
-import { canRollDice, canMoveToken, canEndTurn } from "./validators";
+import { canRollDice, canMoveToken, canEndTurn, toPlayer, isAuthorized } from "./validators";
 import type { Player } from "./gameLogic";
+import type { Doc } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 
 // Bot pacing: slow enough that humans can follow the dice roll, the token
 // animation, and the turn handoff on the client.
 const BOT_HANDOFF_MS = 1500; // delay before a bot starts (or continues) its turn
 const BOT_ACTION_MS = 2000; // delay between a bot's roll and its move
+
+// Cap on the number of entries kept in room.moveHistory, to keep the room
+// document from growing without bound over a long game.
+const MAX_MOVE_HISTORY = 50;
+
+/**
+ * Schedule botPlay for the player at `playerIndex`, if they're a bot.
+ */
+async function scheduleBotIfNeeded(
+  ctx: MutationCtx,
+  roomId: string,
+  players: Doc<"players">[],
+  playerIndex: number,
+  delayMs: number
+): Promise<void> {
+  const nextPlayer = players[playerIndex];
+  if (nextPlayer && (nextPlayer.isBot ?? false)) {
+    await ctx.scheduler.runAfter(delayMs, internal.game.botPlay, { roomId });
+  }
+}
+
+/**
+ * Roll the dice for the current player and persist the result, handling the
+ * "three consecutive sixes forfeits the turn" rule. Shared by the human
+ * rollDiceMutation and the bot's auto-play loop so both behave identically.
+ */
+async function applyRollToRoom(
+  ctx: MutationCtx,
+  room: Doc<"rooms">,
+  players: Doc<"players">[]
+): Promise<{ diceValue: number; thirdSix: boolean }> {
+  const diceValue = rollDice();
+  let consecutiveSixes = room.consecutiveSixes ?? 0;
+  let thirdSix = false;
+
+  if (diceValue === 6) {
+    consecutiveSixes += 1;
+
+    if (consecutiveSixes >= 3) {
+      thirdSix = true;
+      const nextPlayerIndex = (room.currentPlayerIndex + 1) % players.length;
+      // Single patch: advance the turn and clear all dice state, so the
+      // third six is never visible to clients and the DB never ends up
+      // holding a stale diceValue of 6.
+      await ctx.db.patch(room._id, {
+        hasRolledDice: false,
+        diceValue: 0,
+        consecutiveSixes: 0,
+        currentPlayerIndex: nextPlayerIndex,
+      });
+
+      await scheduleBotIfNeeded(ctx, room.roomId, players, nextPlayerIndex, BOT_HANDOFF_MS);
+      return { diceValue, thirdSix };
+    }
+  } else {
+    consecutiveSixes = 0;
+  }
+
+  await ctx.db.patch(room._id, {
+    diceValue,
+    hasRolledDice: true,
+    consecutiveSixes,
+  });
+
+  return { diceValue, thirdSix };
+}
+
+/**
+ * Move a token for `currentPlayerDoc`, persist the resulting token
+ * positions, move history, win state, and turn advancement. Shared by the
+ * human moveTokenMutation and the bot's auto-play loop.
+ */
+async function applyMoveAndAdvance(
+  ctx: MutationCtx,
+  room: Doc<"rooms">,
+  players: Doc<"players">[],
+  currentPlayerDoc: Doc<"players">,
+  tokenId: number
+): Promise<{ success: true; captured: boolean } | { success: false; error: string }> {
+  const currentPlayer: Player = toPlayer(currentPlayerDoc);
+  const allPlayers: Player[] = players.map(toPlayer);
+
+  const result = moveToken(allPlayers, currentPlayer, tokenId, room.diceValue);
+  if (!result) {
+    return { success: false, error: "Failed to move token" };
+  }
+
+  // Update all players in database
+  for (const updatedPlayer of result.updatedPlayers) {
+    const playerDoc = players.find((p) => p.playerId === updatedPlayer.playerId);
+    if (playerDoc) {
+      await ctx.db.patch(playerDoc._id, {
+        tokens: updatedPlayer.tokens,
+      });
+    }
+  }
+
+  // Store last move and add to (capped) history
+  const movedPlayer = result.updatedPlayers.find((p) => p.playerId === currentPlayer.playerId);
+  const movedToken = movedPlayer?.tokens.find((t) => t.id === tokenId);
+  if (movedPlayer && movedToken) {
+    const fromPosition = currentPlayer.tokens.find((t) => t.id === tokenId)?.position ?? -1;
+    const moveEntry = {
+      playerId: currentPlayer.playerId,
+      playerNickname: currentPlayer.nickname,
+      playerColor: currentPlayer.color,
+      tokenId,
+      fromPosition,
+      toPosition: movedToken.position,
+      captured: result.captured,
+      timestamp: Date.now(),
+    };
+
+    const currentHistory = room.moveHistory ?? [];
+    await ctx.db.patch(room._id, {
+      lastMove: {
+        playerId: currentPlayer.playerId,
+        tokenId,
+        fromPosition,
+        toPosition: movedToken.position,
+        captured: result.captured,
+      },
+      moveHistory: [...currentHistory, moveEntry].slice(-MAX_MOVE_HISTORY),
+    });
+  }
+
+  // Check for win
+  const winnerPlayer = result.updatedPlayers.find((p) => checkWin(p));
+  if (winnerPlayer) {
+    await ctx.db.patch(room._id, {
+      gameState: "finished",
+      winnerId: winnerPlayer.playerId,
+      consecutiveSixes: 0,
+    });
+    return { success: true, captured: result.captured };
+  }
+
+  if (room.diceValue === 6) {
+    // Rolling a 6 grants another turn to the same player.
+    await ctx.db.patch(room._id, { hasRolledDice: false });
+    await scheduleBotIfNeeded(ctx, room.roomId, players, room.currentPlayerIndex, BOT_HANDOFF_MS);
+  } else {
+    const nextPlayerIndex = (room.currentPlayerIndex + 1) % result.updatedPlayers.length;
+    await ctx.db.patch(room._id, {
+      currentPlayerIndex: nextPlayerIndex,
+      hasRolledDice: false,
+      diceValue: 0,
+      consecutiveSixes: 0,
+    });
+    await scheduleBotIfNeeded(ctx, room.roomId, players, nextPlayerIndex, BOT_HANDOFF_MS);
+  }
+
+  return { success: true, captured: result.captured };
+}
 
 /**
  * Roll dice for current player
@@ -17,6 +173,7 @@ export const rollDiceMutation = mutation({
   args: {
     roomId: v.string(),
     playerId: v.string(),
+    authToken: v.optional(v.string()),
   },
   returns: v.union(
     v.object({
@@ -46,59 +203,18 @@ export const rollDiceMutation = mutation({
 
     players.sort((a, b) => a.playerIndex - b.playerIndex);
 
+    const playerDoc = players.find((p) => p.playerId === args.playerId);
+    if (!playerDoc || !isAuthorized(playerDoc, args.authToken)) {
+      return { success: false as const, error: "Unauthorized" };
+    }
+
     // Validate
     const validation = canRollDice(room, players, args.playerId);
     if (!validation.valid) {
       return { success: false as const, error: validation.error || "Cannot roll dice" };
     }
 
-    // Roll dice
-    const diceValue = rollDice();
-
-    // Track consecutive 6s
-    let consecutiveSixes = room.consecutiveSixes ?? 0;
-    let thirdSix = false;
-    
-    if (diceValue === 6) {
-      consecutiveSixes += 1;
-      
-      // If this is the third consecutive 6, end turn immediately
-      if (consecutiveSixes >= 3) {
-        thirdSix = true;
-        const nextPlayerIndex = (room.currentPlayerIndex + 1) % players.length;
-        await ctx.db.patch(room._id, {
-          diceValue,
-          hasRolledDice: true,
-          consecutiveSixes: 0,
-          currentPlayerIndex: nextPlayerIndex,
-        });
-        
-        // Reset hasRolledDice for next player
-        await ctx.db.patch(room._id, {
-          hasRolledDice: false,
-          diceValue: 0,
-        });
-
-        // Schedule bot play if next player is a bot
-        const nextPlayer = players[nextPlayerIndex];
-        if (nextPlayer && (nextPlayer.isBot ?? false)) {
-          await ctx.scheduler.runAfter(BOT_HANDOFF_MS, internal.game.botPlay, {
-            roomId: args.roomId,
-          });
-        }
-        
-        return { success: true as const, diceValue, thirdSix };
-      }
-    } else {
-      consecutiveSixes = 0;
-    }
-
-    // Update room
-    await ctx.db.patch(room._id, {
-      diceValue,
-      hasRolledDice: true,
-      consecutiveSixes,
-    });
+    const { diceValue, thirdSix } = await applyRollToRoom(ctx, room, players);
 
     return { success: true as const, diceValue, thirdSix };
   },
@@ -112,6 +228,7 @@ export const moveTokenMutation = mutation({
     roomId: v.string(),
     playerId: v.string(),
     tokenId: v.number(),
+    authToken: v.optional(v.string()),
   },
   returns: v.union(
     v.object({
@@ -140,6 +257,11 @@ export const moveTokenMutation = mutation({
 
     players.sort((a, b) => a.playerIndex - b.playerIndex);
 
+    const playerDoc = players.find((p) => p.playerId === args.playerId);
+    if (!playerDoc || !isAuthorized(playerDoc, args.authToken)) {
+      return { success: false as const, error: "Unauthorized" };
+    }
+
     // Validate
     const validation = canMoveToken(room, players, args.playerId, args.tokenId, room.diceValue);
     if (!validation.valid) {
@@ -152,113 +274,7 @@ export const moveTokenMutation = mutation({
       return { success: false as const, error: "Current player not found" };
     }
 
-    // Convert to Player type for game logic
-    const currentPlayer: Player = {
-      playerId: currentPlayerDoc.playerId,
-      nickname: currentPlayerDoc.nickname,
-      color: currentPlayerDoc.color,
-      tokens: currentPlayerDoc.tokens,
-      isReady: currentPlayerDoc.isReady,
-      playerIndex: currentPlayerDoc.playerIndex,
-      isBot: currentPlayerDoc.isBot ?? false,
-    };
-
-    const allPlayers: Player[] = players.map((p) => ({
-      playerId: p.playerId,
-      nickname: p.nickname,
-      color: p.color,
-      tokens: p.tokens,
-      isReady: p.isReady,
-      playerIndex: p.playerIndex,
-      isBot: p.isBot ?? false,
-    }));
-
-    // Move token
-    const result = moveToken(allPlayers, currentPlayer, args.tokenId, room.diceValue);
-    if (!result) {
-      return { success: false as const, error: "Failed to move token" };
-    }
-
-    // Update all players in database
-    for (const updatedPlayer of result.updatedPlayers) {
-      const playerDoc = players.find((p) => p.playerId === updatedPlayer.playerId);
-      if (playerDoc) {
-        await ctx.db.patch(playerDoc._id, {
-          tokens: updatedPlayer.tokens,
-        });
-      }
-    }
-
-    // Store last move and add to history
-    const movedPlayer = result.updatedPlayers.find((p) => p.playerId === args.playerId);
-    if (movedPlayer) {
-      const token = movedPlayer.tokens[args.tokenId];
-      if (token) {
-        const moveEntry = {
-          playerId: args.playerId,
-          playerNickname: currentPlayer.nickname,
-          playerColor: currentPlayer.color,
-          tokenId: args.tokenId,
-          fromPosition: currentPlayer.tokens[args.tokenId]?.position ?? -1,
-          toPosition: token.position,
-          captured: result.captured,
-          timestamp: Date.now(),
-        };
-        
-        const currentHistory = room.moveHistory ?? [];
-        await ctx.db.patch(room._id, {
-          lastMove: {
-            playerId: args.playerId,
-            tokenId: args.tokenId,
-            fromPosition: currentPlayer.tokens[args.tokenId]?.position ?? -1,
-            toPosition: token.position,
-            captured: result.captured,
-          },
-          moveHistory: [...currentHistory, moveEntry],
-        });
-      }
-    }
-
-    // Check for win
-    const winnerPlayer = result.updatedPlayers.find((p) => checkWin(p));
-    if (winnerPlayer) {
-      await ctx.db.patch(room._id, {
-        gameState: "finished",
-        winnerId: winnerPlayer.playerId,
-        consecutiveSixes: 0,
-      });
-    } else {
-      // If rolled 6, player gets another turn (but don't reset consecutive count - it's already tracked)
-      if (room.diceValue === 6) {
-        await ctx.db.patch(room._id, {
-          hasRolledDice: false,
-        });
-        // If current player is a bot, schedule another roll
-        if (currentPlayerDoc.isBot ?? false) {
-          await ctx.scheduler.runAfter(BOT_HANDOFF_MS, internal.game.botPlay, {
-            roomId: args.roomId,
-          });
-        }
-      } else {
-        // Advance to next player and reset consecutive sixes
-        const nextPlayerIndex = (room.currentPlayerIndex + 1) % result.updatedPlayers.length;
-        await ctx.db.patch(room._id, {
-          currentPlayerIndex: nextPlayerIndex,
-          hasRolledDice: false,
-          diceValue: 0,
-          consecutiveSixes: 0,
-        });
-        // Schedule bot play if next player is a bot
-        const nextPlayer = players[nextPlayerIndex];
-        if (nextPlayer && (nextPlayer.isBot ?? false)) {
-          await ctx.scheduler.runAfter(BOT_HANDOFF_MS, internal.game.botPlay, {
-            roomId: args.roomId,
-          });
-        }
-      }
-    }
-
-    return { success: true as const, captured: result.captured };
+    return applyMoveAndAdvance(ctx, room, players, currentPlayerDoc, args.tokenId);
   },
 });
 
@@ -269,6 +285,7 @@ export const endTurn = mutation({
   args: {
     roomId: v.string(),
     playerId: v.string(),
+    authToken: v.optional(v.string()),
   },
   returns: v.union(
     v.object({
@@ -296,6 +313,11 @@ export const endTurn = mutation({
 
     players.sort((a, b) => a.playerIndex - b.playerIndex);
 
+    const playerDoc = players.find((p) => p.playerId === args.playerId);
+    if (!playerDoc || !isAuthorized(playerDoc, args.authToken)) {
+      return { success: false as const, error: "Unauthorized" };
+    }
+
     // Validate
     const validation = canEndTurn(room, players, args.playerId);
     if (!validation.valid) {
@@ -311,13 +333,7 @@ export const endTurn = mutation({
       consecutiveSixes: 0,
     });
 
-    // Schedule bot play if next player is a bot
-    const nextPlayer = players[nextPlayerIndex];
-    if (nextPlayer && (nextPlayer.isBot ?? false)) {
-      await ctx.scheduler.runAfter(BOT_HANDOFF_MS, internal.game.botPlay, {
-        roomId: args.roomId,
-      });
-    }
+    await scheduleBotIfNeeded(ctx, args.roomId, players, nextPlayerIndex, BOT_HANDOFF_MS);
 
     return { success: true as const };
   },
@@ -353,68 +369,9 @@ export const botPlay = internalMutation({
       return null; // Not a bot's turn
     }
 
-    // Convert to Player type
-    const currentPlayer: Player = {
-      playerId: currentPlayerDoc.playerId,
-      nickname: currentPlayerDoc.nickname,
-      color: currentPlayerDoc.color,
-      tokens: currentPlayerDoc.tokens,
-      isReady: currentPlayerDoc.isReady,
-      playerIndex: currentPlayerDoc.playerIndex,
-      isBot: currentPlayerDoc.isBot ?? false,
-    };
-
-    const allPlayers: Player[] = players.map((p) => ({
-      playerId: p.playerId,
-      nickname: p.nickname,
-      color: p.color,
-      tokens: p.tokens,
-      isReady: p.isReady,
-      playerIndex: p.playerIndex,
-      isBot: p.isBot ?? false,
-    }));
-
     // If bot hasn't rolled dice yet, roll it
     if (!room.hasRolledDice) {
-      const diceValue = rollDice();
-
-      // Track consecutive 6s
-      let consecutiveSixes = room.consecutiveSixes ?? 0;
-      let thirdSix = false;
-
-      if (diceValue === 6) {
-        consecutiveSixes += 1;
-
-        // If this is the third consecutive 6, end turn immediately
-        if (consecutiveSixes >= 3) {
-          thirdSix = true;
-          const nextPlayerIndex = (room.currentPlayerIndex + 1) % players.length;
-          await ctx.db.patch(room._id, {
-            diceValue,
-            hasRolledDice: false,
-            consecutiveSixes: 0,
-            currentPlayerIndex: nextPlayerIndex,
-          });
-
-          // Schedule next bot if needed
-          const nextPlayer = players[nextPlayerIndex];
-          if (nextPlayer && (nextPlayer.isBot ?? false)) {
-            await ctx.scheduler.runAfter(BOT_HANDOFF_MS, internal.game.botPlay, {
-              roomId: args.roomId,
-            });
-          }
-          return null;
-        }
-      } else {
-        consecutiveSixes = 0;
-      }
-
-      // Update room with dice roll
-      await ctx.db.patch(room._id, {
-        diceValue,
-        hasRolledDice: true,
-        consecutiveSixes,
-      });
+      const { thirdSix } = await applyRollToRoom(ctx, room, players);
 
       if (!thirdSix) {
         // Schedule next bot action (move or end turn)
@@ -426,6 +383,8 @@ export const botPlay = internalMutation({
     }
 
     // Bot has rolled dice, now choose a move
+    const currentPlayer: Player = toPlayer(currentPlayerDoc);
+    const allPlayers: Player[] = players.map(toPlayer);
     const validMoves = getValidMoves(allPlayers, currentPlayer, room.diceValue);
 
     if (validMoves.length === 0) {
@@ -438,13 +397,7 @@ export const botPlay = internalMutation({
         consecutiveSixes: 0,
       });
 
-      // Schedule next bot if needed
-      const nextPlayer = players[nextPlayerIndex];
-      if (nextPlayer && (nextPlayer.isBot ?? false)) {
-        await ctx.scheduler.runAfter(BOT_HANDOFF_MS, internal.game.botPlay, {
-          roomId: args.roomId,
-        });
-      }
+      await scheduleBotIfNeeded(ctx, args.roomId, players, nextPlayerIndex, BOT_HANDOFF_MS);
       return null;
     }
 
@@ -454,93 +407,7 @@ export const botPlay = internalMutation({
       return null;
     }
 
-    // Execute the move
-    const result = moveToken(allPlayers, currentPlayer, tokenId, room.diceValue);
-    if (!result) {
-      return null;
-    }
-
-    // Update all players in database
-    for (const updatedPlayer of result.updatedPlayers) {
-      const playerDoc = players.find((p) => p.playerId === updatedPlayer.playerId);
-      if (playerDoc) {
-        await ctx.db.patch(playerDoc._id, {
-          tokens: updatedPlayer.tokens,
-        });
-      }
-    }
-
-    // Store last move and add to history
-    const movedPlayer = result.updatedPlayers.find((p) => p.playerId === currentPlayer.playerId);
-    if (movedPlayer) {
-      const token = movedPlayer.tokens[tokenId];
-      if (token) {
-        const moveEntry = {
-          playerId: currentPlayer.playerId,
-          playerNickname: currentPlayer.nickname,
-          playerColor: currentPlayer.color,
-          tokenId,
-          fromPosition: currentPlayer.tokens[tokenId]?.position ?? -1,
-          toPosition: token.position,
-          captured: result.captured,
-          timestamp: Date.now(),
-        };
-        
-        const currentHistory = room.moveHistory ?? [];
-        await ctx.db.patch(room._id, {
-          lastMove: {
-            playerId: currentPlayer.playerId,
-            tokenId,
-            fromPosition: currentPlayer.tokens[tokenId]?.position ?? -1,
-            toPosition: token.position,
-            captured: result.captured,
-          },
-          moveHistory: [...currentHistory, moveEntry],
-        });
-      }
-    }
-
-    // Check for win
-    const winnerPlayer = result.updatedPlayers.find((p) => 
-      p.tokens.every((t) => t.isFinished)
-    );
-    
-    if (winnerPlayer) {
-      await ctx.db.patch(room._id, {
-        gameState: "finished",
-        winnerId: winnerPlayer.playerId,
-        consecutiveSixes: 0,
-      });
-      return null;
-    }
-
-    // If rolled 6, bot gets another turn
-    if (room.diceValue === 6) {
-      await ctx.db.patch(room._id, {
-        hasRolledDice: false,
-      });
-      // Schedule another roll
-      await ctx.scheduler.runAfter(BOT_HANDOFF_MS, internal.game.botPlay, {
-        roomId: args.roomId,
-      });
-    } else {
-      // Advance to next player
-      const nextPlayerIndex = (room.currentPlayerIndex + 1) % result.updatedPlayers.length;
-      await ctx.db.patch(room._id, {
-        currentPlayerIndex: nextPlayerIndex,
-        hasRolledDice: false,
-        diceValue: 0,
-        consecutiveSixes: 0,
-      });
-
-      // Schedule next bot if needed
-      const nextPlayer = players[nextPlayerIndex];
-      if (nextPlayer && (nextPlayer.isBot ?? false)) {
-        await ctx.scheduler.runAfter(BOT_HANDOFF_MS, internal.game.botPlay, {
-          roomId: args.roomId,
-        });
-      }
-    }
+    await applyMoveAndAdvance(ctx, room, players, currentPlayerDoc, tokenId);
 
     return null;
   },

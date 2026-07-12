@@ -14,7 +14,7 @@ describe('nextStep', () => {
   });
   it('enters the home column at the color home entry', () => {
     expect(nextStep('red', 51)).toBe(52);
-    expect(nextStep('blue', 12)).toBe(52);
+    expect(nextStep('green', 12)).toBe(52);
   });
   it('advances within the home column', () => {
     expect(nextStep('green', 54)).toBe(55);
@@ -40,10 +40,10 @@ describe('computePathPlan', () => {
     expect(plan.points[2]).toEqual(getSquareCoordinates(4, 'red'));
   });
   it('crosses from track into home column', () => {
-    const plan = computePathPlan('blue', t(11), t(53));
+    const plan = computePathPlan('green', t(11), t(53));
     // 11 -> 12 -> 52 -> 53
     expect(plan.points).toHaveLength(4);
-    expect(plan.points[2]).toEqual(getSquareCoordinates(52, 'blue'));
+    expect(plan.points[2]).toEqual(getSquareCoordinates(52, 'green'));
   });
   it('flies back home when captured', () => {
     const plan = computePathPlan('green', t(20), t(-1, true));

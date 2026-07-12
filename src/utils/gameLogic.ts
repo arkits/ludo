@@ -1,88 +1,65 @@
 import type { Player } from '../types/game';
-import { START_POSITIONS, HOME_ENTRY_POSITIONS } from './boardPositions';
-
-const BOARD_SIZE = 52;
-const HOME_COLUMN_SIZE = 6;
+import { getValidMoves as serverGetValidMoves } from '../../convex/gameLogic';
+import type { Player as ServerPlayer } from '../../convex/gameLogic';
 
 /**
- * Calculate new position after moving (simplified frontend version)
- * This is used to determine valid moves visually - actual move validation happens on backend
+ * This module used to be a drifted duplicate of the server's rule engine
+ * (convex/gameLogic.ts) - it ignored opponent blocks entirely, which meant
+ * the UI would highlight moves the server would reject, and a player who
+ * rolled a 6 whose only moves were block-obstructed could get soft-locked
+ * (the client's canEndTurn disabled the End Turn button because it thought
+ * a move existed).
+ *
+ * convex/gameLogic.ts has no server-only imports, so it's safe to import
+ * directly from the client. This file is now a thin adapter: it maps the
+ * client `Player` shape (which uses `id`) to the server `Player` shape
+ * (which uses `playerId`) and delegates to the real engine, passing ALL
+ * players so block logic applies exactly like it does on the server.
  */
-function calculateNewPosition(
-  color: 'red' | 'green' | 'yellow' | 'blue',
-  currentPosition: number,
-  steps: number
-): number | null {
-  if (currentPosition === -1) {
-    return steps === 6 ? START_POSITIONS[color] : null;
-  }
 
-  // Token is in home column (positions 52-56, with 57 being finish)
-  if (currentPosition >= 52) {
-    const homePosition = currentPosition - 52;
-    const newHomePosition = homePosition + steps;
-    
-    if (newHomePosition <= HOME_COLUMN_SIZE - 1) {
-      return 52 + newHomePosition;
-    }
-    return null; // Would exceed finish
-  }
-
-  // Token is on main track
-  const startPos = START_POSITIONS[color];
-  const homeEntry = HOME_ENTRY_POSITIONS[color];
-  
-  const distanceFromStart = (currentPosition - startPos + BOARD_SIZE) % BOARD_SIZE;
-  const newDistanceFromStart = distanceFromStart + steps;
-  const homeEntryDistance = (homeEntry - startPos + BOARD_SIZE) % BOARD_SIZE;
-  
-  if (newDistanceFromStart > homeEntryDistance) {
-    const stepsIntoHome = newDistanceFromStart - homeEntryDistance - 1;
-    if (stepsIntoHome <= HOME_COLUMN_SIZE - 1) {
-      return 52 + stepsIntoHome;
-    }
-    return null;
-  }
-  
-  return (currentPosition + steps) % BOARD_SIZE;
+function toServerPlayer(player: Player): ServerPlayer {
+  return {
+    playerId: player.id,
+    nickname: player.nickname,
+    color: player.color,
+    tokens: player.tokens,
+    isReady: player.isReady,
+    playerIndex: 0,
+    isBot: player.isBot,
+  };
 }
 
-export function getValidMoves(player: Player, diceValue: number): number[] {
-  const validMoves: number[] = [];
-
-  // If rolled 6, can move token from home base
-  if (diceValue === 6) {
-    const homeTokens = player.tokens.filter(t => t.isHome && !t.isFinished);
-    if (homeTokens.length > 0) {
-      validMoves.push(...homeTokens.map(t => t.id));
-    }
-  }
-
-  // Check tokens on board (this is a simplified check - backend does full validation)
-  const boardTokens = player.tokens.filter(t => !t.isHome && !t.isFinished);
-  for (const token of boardTokens) {
-    const newPosition = calculateNewPosition(player.color, token.position, diceValue);
-    if (newPosition !== null) {
-      validMoves.push(token.id);
-    }
-  }
-
-  return validMoves;
+/**
+ * Get the list of valid token ids for `currentPlayer` given `diceValue`,
+ * taking every player's tokens (for block/capture logic) into account.
+ */
+export function calculateValidMoves(
+  allPlayers: Player[],
+  currentPlayer: Player,
+  diceValue: number
+): number[] {
+  const serverPlayers = allPlayers.map(toServerPlayer);
+  const serverCurrentPlayer =
+    serverPlayers.find((p) => p.playerId === currentPlayer.id) ?? toServerPlayer(currentPlayer);
+  return serverGetValidMoves(serverPlayers, serverCurrentPlayer, diceValue);
 }
 
-export function calculateValidMoves(player: Player, diceValue: number): number[] {
-  return getValidMoves(player, diceValue);
-}
-
-export function canEndTurn(player: Player, diceValue: number, hasRolledDice: boolean): boolean {
+/**
+ * Whether the current player is allowed to end their turn right now.
+ */
+export function canEndTurn(
+  allPlayers: Player[],
+  currentPlayer: Player,
+  diceValue: number,
+  hasRolledDice: boolean
+): boolean {
   if (!hasRolledDice) return false;
-  
-  // If rolled 6, must move if possible
+
+  // If rolled 6, must move if a valid move exists.
   if (diceValue === 6) {
-    const validMoves = getValidMoves(player, diceValue);
+    const validMoves = calculateValidMoves(allPlayers, currentPlayer, diceValue);
     return validMoves.length === 0;
   }
-  
+
   return true;
 }
-

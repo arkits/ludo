@@ -11,6 +11,35 @@ export interface ValidationResult {
 }
 
 /**
+ * Convert a stored player document to the plain `Player` shape used by the
+ * game engine (convex/gameLogic.ts).
+ */
+export function toPlayer(doc: GamePlayer): Player {
+  return {
+    playerId: doc.playerId,
+    nickname: doc.nickname,
+    color: doc.color,
+    tokens: doc.tokens,
+    isReady: doc.isReady,
+    playerIndex: doc.playerIndex,
+    isBot: doc.isBot ?? false,
+  };
+}
+
+/**
+ * Check that the caller's auth token matches the token stored on the
+ * player document. Players created before authTokens existed have no
+ * `authToken` and are treated as authorized for backward compatibility.
+ * Bots are never authorized for external callers — they are driven only
+ * by the internal botPlay scheduler, which does not go through this check.
+ */
+export function isAuthorized(player: GamePlayer, authToken?: string): boolean {
+  if (player.isBot ?? false) return false;
+  if (!player.authToken) return true;
+  return player.authToken === authToken;
+}
+
+/**
  * Validate if a player can roll dice
  */
 export function canRollDice(
@@ -61,31 +90,14 @@ export function canMoveToken(
     return { valid: false, error: "Invalid dice value" };
   }
 
-  const token = currentPlayer.tokens[tokenId];
+  const token = currentPlayer.tokens.find((t) => t.id === tokenId);
   if (!token) {
     return { valid: false, error: "Invalid token" };
   }
 
   // Convert GamePlayer to Player for getValidMoves
-  const player: Player = {
-    playerId: currentPlayer.playerId,
-    nickname: currentPlayer.nickname,
-    color: currentPlayer.color,
-    tokens: currentPlayer.tokens,
-    isReady: currentPlayer.isReady,
-    playerIndex: currentPlayer.playerIndex,
-    isBot: currentPlayer.isBot ?? false,
-  };
-
-  const allPlayers: Player[] = players.map((p) => ({
-    playerId: p.playerId,
-    nickname: p.nickname,
-    color: p.color,
-    tokens: p.tokens,
-    isReady: p.isReady,
-    playerIndex: p.playerIndex,
-    isBot: p.isBot ?? false,
-  }));
+  const player: Player = toPlayer(currentPlayer);
+  const allPlayers: Player[] = players.map(toPlayer);
 
   const validMoves = getValidMoves(allPlayers, player, diceValue);
   if (!validMoves.includes(tokenId)) {
@@ -118,25 +130,8 @@ export function canEndTurn(
 
   // If rolled 6, player must move if possible
   if (room.diceValue === 6 && room.hasRolledDice) {
-    const player: Player = {
-      playerId: currentPlayer.playerId,
-      nickname: currentPlayer.nickname,
-      color: currentPlayer.color,
-      tokens: currentPlayer.tokens,
-      isReady: currentPlayer.isReady,
-      playerIndex: currentPlayer.playerIndex,
-      isBot: currentPlayer.isBot ?? false,
-    };
-
-    const allPlayers: Player[] = players.map((p) => ({
-      playerId: p.playerId,
-      nickname: p.nickname,
-      color: p.color,
-      tokens: p.tokens,
-      isReady: p.isReady,
-      playerIndex: p.playerIndex,
-      isBot: p.isBot ?? false,
-    }));
+    const player: Player = toPlayer(currentPlayer);
+    const allPlayers: Player[] = players.map(toPlayer);
 
     const validMoves = getValidMoves(allPlayers, player, room.diceValue);
     if (validMoves.length > 0) {

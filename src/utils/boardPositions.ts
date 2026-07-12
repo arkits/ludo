@@ -124,21 +124,23 @@ const HOME_COLUMNS: Record<PlayerColor, Array<{ x: number; y: number }>> = {
   ],
 };
 
-// Starting positions for each color on the main track
+// Starting positions for each color on the main track.
+// Must agree with convex/gameLogic.ts START_POSITIONS: Red=top-left (0),
+// Green=top-right (13), Yellow=bottom-right (26), Blue=bottom-left (39).
 export const START_POSITIONS: Record<PlayerColor, number> = {
   red: 0,
-  blue: 13,
-  green: 26,
-  yellow: 39,
+  green: 13,
+  yellow: 26,
+  blue: 39,
 };
 
-// Position after which each color enters their home column
-// This matches the backend HOME_ENTRY values
+// Position after which each color enters their home column.
+// This matches convex/gameLogic.ts HOME_ENTRY values.
 export const HOME_ENTRY_POSITIONS: Record<PlayerColor, number> = {
   red: 51,    // Red enters home after position 51 (one before their start)
-  blue: 12,   // Blue enters home after position 12
-  green: 25,  // Green enters home after position 25
-  yellow: 38, // Yellow enters home after position 38
+  green: 12,  // Green enters home after position 12
+  yellow: 25, // Yellow enters home after position 25
+  blue: 38,   // Blue enters home after position 38
 };
 
 export function getSquareCoordinates(position: number, color?: PlayerColor): { x: number; y: number } {
