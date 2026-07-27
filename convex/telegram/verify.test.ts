@@ -35,13 +35,22 @@ describe("buildDataCheckString", () => {
     expect(buildDataCheckString(params)).toBe("a=1\nb=2\nc=3");
   });
 
-  it("excludes hash and signature", () => {
+  it("excludes hash", () => {
+    const params = new URLSearchParams({ a: "1", hash: "deadbeef" });
+    expect(buildDataCheckString(params)).toBe("a=1");
+  });
+
+  // Regression: `signature` was originally excluded here alongside `hash`.
+  // That rule belongs to the third-party Ed25519 check, not the bot-token
+  // HMAC, and dropping it made every real Bot API 8.0+ launch fail while
+  // synthetic payloads (which carry no signature) kept passing.
+  it("includes signature, which counts as a received field", () => {
     const params = new URLSearchParams({
       a: "1",
       hash: "deadbeef",
-      signature: "ed25519",
+      signature: "ed25519sig",
     });
-    expect(buildDataCheckString(params)).toBe("a=1");
+    expect(buildDataCheckString(params)).toBe("a=1\nsignature=ed25519sig");
   });
 });
 
@@ -80,6 +89,38 @@ describe("verifyInitData", () => {
     // Swap in a different user id, keeping the original hash.
     const params = new URLSearchParams(initData);
     params.set("user", JSON.stringify({ ...USER, id: 999 }));
+
+    const result = await verifyInitData(params.toString(), BOT_TOKEN, { now: NOW });
+
+    expect(result).toEqual({ ok: false, error: "Signature verification failed" });
+  });
+
+  // The shape a real Bot API 8.0+ client sends. Without a case like this,
+  // mishandling `signature` is invisible: every other fixture omits it.
+  it("accepts a real-shaped payload carrying a signature field", async () => {
+    const initData = await signInitDataForTest(
+      baseFields({
+        signature: "Aq7Vn0_5xK2mBqZ8tYw3PdLcRfHgJkNpQsTuVwXyZaBcDeFgHiJkLmNoPqRsTuVw",
+        chat_instance: "-1234567890123456789",
+      }),
+      BOT_TOKEN
+    );
+
+    const result = await verifyInitData(initData, BOT_TOKEN, { now: NOW });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.user.id).toBe(42);
+  });
+
+  it("rejects a payload whose signature field was swapped after signing", async () => {
+    const initData = await signInitDataForTest(
+      baseFields({ signature: "originalSignatureValue" }),
+      BOT_TOKEN
+    );
+
+    const params = new URLSearchParams(initData);
+    params.set("signature", "tamperedSignatureValue");
 
     const result = await verifyInitData(params.toString(), BOT_TOKEN, { now: NOW });
 

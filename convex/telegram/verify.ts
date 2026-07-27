@@ -37,11 +37,16 @@ export type VerifyResult =
 export const MAX_INIT_DATA_AGE_MS = 15 * 60 * 1000;
 
 /**
- * Fields that must be excluded from the data-check-string. `hash` is the
- * value we are verifying; `signature` belongs to Telegram's separate
- * third-party Ed25519 scheme and is not covered by the HMAC.
+ * Fields excluded from the data-check-string.
+ *
+ * Only `hash` - the value being verified. Every other received field counts,
+ * *including* `signature`, which Bot API 8.0+ clients send for third-party
+ * Ed25519 validation. That field is excluded only from the third-party
+ * data-check-string (the one prefixed `bot_id:WebAppData`), never from this
+ * bot-token HMAC. Dropping it here makes every real launch fail to verify
+ * while synthetic payloads without a `signature` still pass.
  */
-const EXCLUDED_FIELDS = new Set(["hash", "signature"]);
+const EXCLUDED_FIELDS = new Set(["hash"]);
 
 const encoder = new TextEncoder();
 
