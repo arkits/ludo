@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { rollDice, moveToken, checkWin, getValidMoves, chooseBotMove } from "./gameLogic";
 import { canRollDice, canMoveToken, canEndTurn, toPlayer, isAuthorized } from "./validators";
+import { scheduleTurnHooks, nextTurnStamp } from "./telegram/hooks";
 import type { Player } from "./gameLogic";
 import type { Doc } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
@@ -33,6 +34,55 @@ async function scheduleBotIfNeeded(
 }
 
 /**
+ * The single choke point for "the turn changed". Every path that hands play
+ * on - a third six, a completed move, an explicit end-turn, a bot with no
+ * legal moves - routes through here, so the Telegram bookkeeping can never be
+ * forgotten on one branch.
+ */
+async function commitTurnChange(
+  ctx: MutationCtx,
+  room: Doc<"rooms">,
+  players: Doc<"players">[],
+  nextPlayerIndex: number,
+  patch: Partial<Doc<"rooms">>
+): Promise<void> {
+  const turnStartedAt = nextTurnStamp(room);
+
+  await ctx.db.patch(room._id, { ...patch, turnStartedAt });
+  await scheduleBotIfNeeded(ctx, room.roomId, players, nextPlayerIndex, BOT_HANDOFF_MS);
+  await scheduleTurnHooks(ctx, room, players, nextPlayerIndex, turnStartedAt);
+}
+
+/** Hand play to `nextPlayerIndex`, clearing all dice state. */
+async function advanceTurn(
+  ctx: MutationCtx,
+  room: Doc<"rooms">,
+  players: Doc<"players">[],
+  nextPlayerIndex: number
+): Promise<void> {
+  await commitTurnChange(ctx, room, players, nextPlayerIndex, {
+    currentPlayerIndex: nextPlayerIndex,
+    hasRolledDice: false,
+    diceValue: 0,
+    consecutiveSixes: 0,
+  });
+}
+
+/**
+ * The same player rolls again after a 6. `consecutiveSixes` is deliberately
+ * preserved - it is what makes the three-sixes rule work across extra rolls.
+ */
+async function grantExtraRoll(
+  ctx: MutationCtx,
+  room: Doc<"rooms">,
+  players: Doc<"players">[]
+): Promise<void> {
+  await commitTurnChange(ctx, room, players, room.currentPlayerIndex, {
+    hasRolledDice: false,
+  });
+}
+
+/**
  * Roll the dice for the current player and persist the result, handling the
  * "three consecutive sixes forfeits the turn" rule. Shared by the human
  * rollDiceMutation and the bot's auto-play loop so both behave identically.
@@ -55,14 +105,7 @@ async function applyRollToRoom(
       // Single patch: advance the turn and clear all dice state, so the
       // third six is never visible to clients and the DB never ends up
       // holding a stale diceValue of 6.
-      await ctx.db.patch(room._id, {
-        hasRolledDice: false,
-        diceValue: 0,
-        consecutiveSixes: 0,
-        currentPlayerIndex: nextPlayerIndex,
-      });
-
-      await scheduleBotIfNeeded(ctx, room.roomId, players, nextPlayerIndex, BOT_HANDOFF_MS);
+      await advanceTurn(ctx, room, players, nextPlayerIndex);
       return { diceValue, thirdSix };
     }
   } else {
@@ -145,22 +188,21 @@ async function applyMoveAndAdvance(
       winnerId: winnerPlayer.playerId,
       consecutiveSixes: 0,
     });
+    if (room.telegram) {
+      // Final edit of the chat message, turning it into the result card.
+      await ctx.scheduler.runAfter(0, internal.telegram.notify.refreshBoard, {
+        roomId: room.roomId,
+      });
+    }
     return { success: true, captured: result.captured };
   }
 
   if (room.diceValue === 6) {
     // Rolling a 6 grants another turn to the same player.
-    await ctx.db.patch(room._id, { hasRolledDice: false });
-    await scheduleBotIfNeeded(ctx, room.roomId, players, room.currentPlayerIndex, BOT_HANDOFF_MS);
+    await grantExtraRoll(ctx, room, players);
   } else {
     const nextPlayerIndex = (room.currentPlayerIndex + 1) % result.updatedPlayers.length;
-    await ctx.db.patch(room._id, {
-      currentPlayerIndex: nextPlayerIndex,
-      hasRolledDice: false,
-      diceValue: 0,
-      consecutiveSixes: 0,
-    });
-    await scheduleBotIfNeeded(ctx, room.roomId, players, nextPlayerIndex, BOT_HANDOFF_MS);
+    await advanceTurn(ctx, room, players, nextPlayerIndex);
   }
 
   return { success: true, captured: result.captured };
@@ -326,14 +368,7 @@ export const endTurn = mutation({
 
     // Advance to next player and reset consecutive sixes
     const nextPlayerIndex = (room.currentPlayerIndex + 1) % players.length;
-    await ctx.db.patch(room._id, {
-      currentPlayerIndex: nextPlayerIndex,
-      hasRolledDice: false,
-      diceValue: 0,
-      consecutiveSixes: 0,
-    });
-
-    await scheduleBotIfNeeded(ctx, args.roomId, players, nextPlayerIndex, BOT_HANDOFF_MS);
+    await advanceTurn(ctx, room, players, nextPlayerIndex);
 
     return { success: true as const };
   },
@@ -390,14 +425,7 @@ export const botPlay = internalMutation({
     if (validMoves.length === 0) {
       // No valid moves, end turn
       const nextPlayerIndex = (room.currentPlayerIndex + 1) % players.length;
-      await ctx.db.patch(room._id, {
-        currentPlayerIndex: nextPlayerIndex,
-        hasRolledDice: false,
-        diceValue: 0,
-        consecutiveSixes: 0,
-      });
-
-      await scheduleBotIfNeeded(ctx, args.roomId, players, nextPlayerIndex, BOT_HANDOFF_MS);
+      await advanceTurn(ctx, room, players, nextPlayerIndex);
       return null;
     }
 

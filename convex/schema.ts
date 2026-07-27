@@ -35,8 +35,33 @@ export default defineSchema({
     )),
     winnerId: v.union(v.string(), v.null()),
     createdAt: v.number(),
+
+    // Telegram matches only. The presence of this field marks a room as
+    // Telegram-owned: its roomId is never surfaced in chat, and joinRoom()
+    // refuses it outright so web players can never wander in.
+    telegram: v.optional(
+      v.object({
+        chatId: v.number(),
+        chatType: v.union(
+          v.literal("private"),
+          v.literal("group"),
+          v.literal("supergroup")
+        ),
+        // The lobby message, which becomes the live status board once the
+        // game starts. Absent for solo matches, which have no chat presence.
+        lobbyMessageId: v.optional(v.number()),
+        // Throttling state for status-board edits.
+        statusEditedAt: v.optional(v.number()),
+        statusText: v.optional(v.string()),
+      })
+    ),
+    // Stamped on every turn advance. Doubles as the fingerprint that lets a
+    // scheduled idle check detect whether the turn moved on since it was
+    // scheduled, so stale timers self-invalidate (see telegram/idle.ts).
+    turnStartedAt: v.optional(v.number()),
   })
-    .index("by_roomId", ["roomId"]),
+    .index("by_roomId", ["roomId"])
+    .index("by_telegram_chat", ["telegram.chatId"]),
 
   players: defineTable({
     roomId: v.string(),
@@ -55,7 +80,9 @@ export default defineSchema({
     playerIndex: v.number(), // Order in which player joined (0 = creator)
     isBot: v.optional(v.boolean()), // Whether this player is a bot (defaults to false)
     authToken: v.optional(v.string()), // Per-player secret used to authorize mutations for this player
+    telegramUserId: v.optional(v.number()), // Set for seats claimed via Telegram
   })
     .index("by_roomId", ["roomId"])
-    .index("by_roomId_and_playerId", ["roomId", "playerId"]),
+    .index("by_roomId_and_playerId", ["roomId", "playerId"])
+    .index("by_roomId_and_telegramUserId", ["roomId", "telegramUserId"]),
 });

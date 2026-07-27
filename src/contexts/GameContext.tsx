@@ -55,6 +55,21 @@ type GameAction =
   | { type: 'SET_ROOM_ID'; payload: string | null }
   | { type: 'CLEAR_ROOM' };
 
+/**
+ * A pre-authenticated seat, supplied by the Telegram Mini App.
+ *
+ * The web app has no session: it derives its identity from localStorage and
+ * the `?room=` URL parameter. Telegram players instead arrive with identity
+ * already proven by signed initData and exchanged for a seat token (see
+ * convex/telegram/match.ts), so all of that discovery is bypassed - including
+ * the URL rewriting, which does nothing useful inside a Mini App webview.
+ */
+export interface GameSession {
+  playerId: string;
+  authToken: string;
+  roomId: string;
+}
+
 interface GameContextType {
   state: GameState;
   createRoom: (nickname: string, password?: string) => Promise<void>;
@@ -141,13 +156,24 @@ function transformRoomData(
   };
 }
 
-export function GameProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(gameReducer, initialState);
-  const [playerId] = useState(() => getOrCreatePlayerId());
+export function GameProvider({
+  children,
+  session,
+}: {
+  children: ReactNode;
+  session?: GameSession;
+}) {
+  // With a session the room is known before the first render, so seed the
+  // reducer with it - the room-discovery effect below keys off state.roomId.
+  const [state, dispatch] = useReducer(gameReducer, session, (s) => ({
+    ...initialState,
+    roomId: s?.roomId ?? null,
+  }));
+  const [playerId] = useState(() => session?.playerId ?? getOrCreatePlayerId());
 
   // Get roomId from URL or state
   const urlParams = new URLSearchParams(window.location.search);
-  const roomIdFromUrl = urlParams.get('room');
+  const roomIdFromUrl = session ? null : urlParams.get('room');
   const currentRoomId = state.roomId || roomIdFromUrl;
 
   // Auth token for the current room+player. Initialized lazily (covers
@@ -155,7 +181,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // first render) and otherwise updated directly - and synchronously, not
   // from an effect - whenever createRoom/joinRoom issue a fresh token.
   const [authToken, setAuthToken] = useState<string | undefined>(() =>
-    currentRoomId ? getStoredAuthToken(currentRoomId, playerId) : undefined
+    session?.authToken ??
+    (currentRoomId ? getStoredAuthToken(currentRoomId, playerId) : undefined)
   );
 
   // Query room data
@@ -199,7 +226,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const transformed = transformRoomData(roomData.room, roomData.players, playerId);
       
       // Check if player is already in the room (for reconnection scenarios)
-      const isPlayerInRoom = roomData.players.some((p) => p.playerId === playerId);
+      const isPlayerInRoom = roomData.players.some(
+        (p: SanitizedPlayerDoc) => p.playerId === playerId
+      );
       
       // Only set room if player is already in it (they've explicitly joined before)
       // OR if we already have a roomId set (meaning they just joined via the form)
@@ -372,10 +401,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       });
 
       dispatch({ type: 'CLEAR_ROOM' });
-      // Remove room ID from URL
-      const url = new URL(window.location.href);
-      url.searchParams.delete('room');
-      window.history.pushState({}, '', url.toString());
+      if (!session) {
+        // Remove room ID from URL
+        const url = new URL(window.location.href);
+        url.searchParams.delete('room');
+        window.history.pushState({}, '', url.toString());
+      }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       dispatch({ type: 'SET_ERROR', payload: errorMessage || 'Failed to leave room' });
@@ -383,7 +414,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_ERROR', payload: null });
       }, 5000);
     }
-  }, [leaveRoomMutation, state.roomId, playerId, authToken]);
+  }, [leaveRoomMutation, state.roomId, playerId, authToken, session]);
 
   const startGame = useCallback(async () => {
     if (!state.roomId) return;

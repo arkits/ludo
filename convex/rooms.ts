@@ -4,19 +4,13 @@ import { internal } from "./_generated/api";
 import { initializeTokens } from "./gameLogic";
 import { canStartGame, canJoinRoom, isAuthorized } from "./validators";
 import { hashPassword, verifyPassword } from "./password";
+import { allocateRoomId } from "./roomId";
 import type { PlayerColor } from "./gameLogic";
 
 const BOT_HANDOFF_MS = 1500;
 const MAX_NICKNAME_LENGTH = 20;
 const ROOM_FINISHED_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const ROOM_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-
-/**
- * Generate a unique room ID
- */
-function generateRoomId(): string {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
-}
 
 /**
  * Trim and cap a nickname, falling back to `fallback` if the result is empty.
@@ -109,20 +103,7 @@ export const createRoom = mutation({
     authToken: v.string(),
   }),
   handler: async (ctx, args) => {
-    // Generate unique room ID
-    let roomId = generateRoomId();
-    let existingRoom = await ctx.db
-      .query("rooms")
-      .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
-      .first();
-
-    while (existingRoom) {
-      roomId = generateRoomId();
-      existingRoom = await ctx.db
-        .query("rooms")
-        .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
-        .first();
-    }
+    const roomId = await allocateRoomId(ctx);
 
     // Hash password if provided
     let passwordHash: string | null = null;
@@ -191,6 +172,14 @@ export const joinRoom = mutation({
       .first();
 
     if (!room) {
+      return { success: false as const, error: "Room not found" };
+    }
+
+    // Telegram matches are a separate world: seats there are claimed through
+    // the bot, against a verified Telegram identity. Their roomId is never
+    // surfaced in chat, so this is defence in depth rather than the primary
+    // barrier - but it is the one place the two systems could otherwise meet.
+    if (room.telegram) {
       return { success: false as const, error: "Room not found" };
     }
 
@@ -598,6 +587,14 @@ export const startGame = mutation({
 
     if (!room) {
       return { success: false as const, error: "Room not found" };
+    }
+
+    // A Telegram match starts from its chat message, via
+    // internal.telegram.match.startMatch, which also stamps the first turn
+    // and arms the idle checks. Allowing this path would start the game
+    // without any of that.
+    if (room.telegram) {
+      return { success: false as const, error: "Start this game from the Telegram chat" };
     }
 
     // Get players
