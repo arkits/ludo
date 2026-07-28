@@ -1,16 +1,35 @@
 /*
- * Mini App layout. Phone-first single column: the web app's 380px sidebar has
- * nowhere to go on a phone, so the player list becomes a horizontal strip
- * above the board and the controls sit below it.
+ * Mini App styling.
  *
- * Colours follow Telegram's theme variables where the container provides them
- * (set by src/telegram/webApp.ts), falling back to the tabletop palette the
- * rest of the app uses.
+ * Phone-first single column: the web app's 380px sidebar has nowhere to go, so
+ * the player list becomes a horizontal strip above the board.
+ *
+ * The palette deliberately ignores Telegram's themeParams. This is a
+ * wood-and-cardboard tabletop in every client - a navy Telegram surface under
+ * a brown board reads as two apps stacked rather than one. Telegram's own
+ * header is repainted to match in src/telegram/webApp.ts.
  */
 
 :root {
   --tg-safe-top: 0px;
   --tg-safe-bottom: 0px;
+
+  /* Shared with the web app - see --wood-* in src/index.css */
+  --w-dark: #3d2817;
+  --w-deep: #2a1b0f;
+  --w-edge: #3a2113;
+  --w-lip: #8e6441;
+  --w-lip-deep: #4b2c19;
+
+  --gold: #f0b45e;
+  --gold-dim: #dca85f;
+  --parchment: #f4e4cb;
+  --parchment-dim: #bba58d;
+
+  --tok-red: #d0524a;
+  --tok-blue: #4382ca;
+  --tok-green: #4da45c;
+  --tok-yellow: #e0b93c;
 }
 
 .tg-root {
@@ -21,14 +40,222 @@
   flex-direction: column;
   padding-top: var(--tg-safe-top);
   padding-bottom: var(--tg-safe-bottom);
-  /* Follow the client's theme rather than the web app's tabletop backdrop,
-     which index.css paints on <body>. Without this, Telegram's dark text
-     lands on a dark brown background. */
-  background: var(--tg-bg, #f5f0e6);
-  color: var(--tg-text, #2f2318);
+  color: var(--parchment);
+  background:
+    radial-gradient(ellipse 120% 70% at 50% -10%, rgba(240, 180, 94, 0.09), transparent 60%),
+    linear-gradient(168deg, #4a3120 0%, var(--w-dark) 42%, var(--w-deep) 100%);
 }
 
-/* ---- Full-screen message states ---- */
+/* Wood grain, matching the web app's body::before treatment. */
+.tg-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 38px, rgba(0, 0, 0, 0.035) 38px 39px, transparent 39px 78px),
+    repeating-linear-gradient(91deg, transparent 0 54px, rgba(255, 255, 255, 0.014) 55px, transparent 57px);
+}
+
+.tg-root > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================ Start screen ============================ */
+
+.tg-start {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px 16px;
+  overflow-y: auto;
+}
+
+/*
+ * The game-box lid: thick wood border with a stacked edge below it, so the
+ * panel reads as a physical object sitting on the table rather than a card.
+ */
+.tg-box {
+  width: min(360px, 100%);
+  padding: 26px 22px 22px;
+  border: 8px solid var(--w-edge);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(239, 180, 94, 0.12), transparent 30%),
+    linear-gradient(135deg, rgba(66, 41, 25, 0.98), rgba(25, 14, 9, 0.99) 58%, rgba(46, 27, 17, 0.99));
+  box-shadow:
+    0 4px 0 var(--w-lip),
+    0 10px 0 var(--w-lip-deep),
+    0 26px 54px rgba(10, 5, 2, 0.6),
+    inset 0 1px rgba(255, 255, 255, 0.1);
+  text-align: center;
+  animation: tg-box-arrival 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Inset rail with brass screws, echoing .lobby-rail on the web. */
+.tg-box-inner {
+  position: relative;
+  padding: 20px 14px 6px;
+  border: 1px solid rgba(232, 190, 128, 0.14);
+  border-radius: 9px;
+}
+
+.tg-screw {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d5af78, #56371f 55%, #1d0f09);
+  box-shadow: 0 1px 3px #000;
+}
+.tg-screw:nth-child(1) { left: 7px; top: 7px; }
+.tg-screw:nth-child(2) { right: 7px; top: 7px; }
+.tg-screw:nth-child(3) { left: 7px; bottom: 7px; }
+.tg-screw:nth-child(4) { right: 7px; bottom: 7px; }
+
+.tg-kicker {
+  color: var(--gold-dim);
+  font: 700 10px/1 "Crimson Text", Georgia, serif;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.tg-logo {
+  margin: 11px 0 0;
+  color: var(--gold);
+  font-family: "Bungee Inline", "Crimson Text", cursive;
+  font-size: clamp(46px, 17vw, 62px);
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: 0.08em;
+  text-shadow: 0 4px 0 #7b3e17, 0 9px 18px #0008, 0 0 34px rgba(240, 180, 94, 0.13);
+}
+
+.tg-logo-sub {
+  margin-top: 11px;
+  color: var(--parchment-dim);
+  font: 700 10px/1 "Crimson Text", Georgia, serif;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+}
+
+.tg-rule {
+  margin: 20px auto 16px;
+  width: 76%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(211, 166, 109, 0.34), transparent);
+}
+
+.tg-field-label {
+  color: var(--parchment-dim);
+  font: 700 10px/1 "Crimson Text", Georgia, serif;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* ---- Opponent picker: pick who sits at the table, not a number ---- */
+
+.tg-seats {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tg-seat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 4px 10px;
+  border: 1px solid rgba(232, 190, 128, 0.2);
+  border-radius: 11px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  color: var(--parchment-dim);
+  font: 700 10px/1 "Crimson Text", Georgia, serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+
+.tg-seat:active { transform: translateY(2px); }
+
+.tg-seat[aria-checked="true"] {
+  border-color: rgba(240, 180, 94, 0.66);
+  background: linear-gradient(180deg, rgba(240, 180, 94, 0.17), rgba(240, 180, 94, 0.05));
+  color: var(--parchment);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.14), 0 0 18px rgba(240, 180, 94, 0.11);
+}
+
+.tg-seat-pawns {
+  display: flex;
+  gap: 4px;
+  min-height: 18px;
+  align-items: flex-end;
+}
+
+/* A pawn read from above: dome highlight, dark rim, contact shadow. */
+.tg-pawn {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 -2px 3px rgba(0, 0, 0, 0.45),
+    inset 0 2px 2px rgba(255, 255, 255, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+}
+.tg-pawn.is-you { width: 17px; height: 17px; outline: 1.5px solid rgba(244, 228, 203, 0.6); outline-offset: 1.5px; }
+.tg-pawn.tok-red { background: radial-gradient(circle at 34% 28%, #ef8078, var(--tok-red) 55%, #8d2f28); }
+.tg-pawn.tok-blue { background: radial-gradient(circle at 34% 28%, #7fb0e8, var(--tok-blue) 55%, #25507f); }
+.tg-pawn.tok-green { background: radial-gradient(circle at 34% 28%, #83cf90, var(--tok-green) 55%, #2a6435); }
+.tg-pawn.tok-yellow { background: radial-gradient(circle at 34% 28%, #f5dc8a, var(--tok-yellow) 55%, #96751b); }
+
+/* ---- Buttons ---- */
+
+.tg-btn {
+  width: 100%;
+  margin-top: 18px;
+  padding: 16px 18px;
+  border: 1px solid #b47b42;
+  border-radius: 11px;
+  color: #fff3e1;
+  background: linear-gradient(180deg, #84542e, #4d2a18);
+  font: 700 13px/1 "Crimson Text", Georgia, serif;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 5px 0 #281309, 0 10px 20px #0005, inset 0 1px #fff4;
+  transition: transform 0.18s ease, filter 0.18s ease, box-shadow 0.18s ease;
+}
+
+.tg-btn:hover { transform: translateY(-2px); filter: brightness(1.12); box-shadow: 0 7px 0 #281309, 0 14px 24px #0006, inset 0 1px #fff4; }
+.tg-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #281309, 0 4px 9px #0005; }
+
+.tg-btn-quiet {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  border-color: rgba(232, 190, 128, 0.24);
+  color: var(--parchment-dim);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4), inset 0 1px rgba(255, 255, 255, 0.08);
+}
+.tg-btn-quiet:active { box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4); }
+
+.tg-hint {
+  margin-top: 16px;
+  color: rgba(187, 165, 141, 0.85);
+  font: 400 12px/1.5 "Crimson Text", Georgia, serif;
+}
+
+.tg-hint code {
+  color: var(--gold-dim);
+  font-family: inherit;
+  font-weight: 700;
+}
+
+/* ======================= Message / status screens ======================= */
 
 .tg-notice {
   flex: 1;
@@ -36,88 +263,37 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 32px 24px;
+  gap: 14px;
+  padding: 32px 26px;
   text-align: center;
 }
 
 .tg-notice-title {
   margin: 0;
-  font-family: 'Crimson Text', Georgia, serif;
-  font-size: 30px;
+  color: var(--parchment);
+  font-family: "Playfair Display", "Crimson Text", Georgia, serif;
+  font-size: 27px;
   font-weight: 700;
-  letter-spacing: 0.01em;
-  color: var(--tg-text, #2f2318);
 }
 
 .tg-notice-body {
   margin: 0;
-  max-width: 32ch;
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--tg-hint, #6b5a45);
+  max-width: 30ch;
+  color: var(--parchment-dim);
+  font: 400 15px/1.55 "Crimson Text", Georgia, serif;
 }
 
-.tg-primary-btn {
-  margin-top: 8px;
-  padding: 14px 32px;
-  border: none;
-  border-radius: 10px;
-  background: var(--tg-button, #b8763c);
-  color: var(--tg-button-text, #fff);
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.12s ease, filter 0.12s ease;
-}
+.tg-notice .tg-btn { width: auto; padding-inline: 34px; }
 
-.tg-primary-btn:active {
-  transform: translateY(1px);
-  filter: brightness(0.94);
-}
-
-/* ---- Solo setup ---- */
-
-.tg-solo-picker {
+.tg-waiting-list {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  margin-top: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 4px 0;
 }
 
-.tg-solo-label {
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--tg-hint, #6b5a45);
-}
-
-.tg-solo-options {
-  display: flex;
-  gap: 10px;
-}
-
-.tg-solo-option {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-  border: 2px solid var(--tg-hint, #c9a882);
-  background: transparent;
-  color: var(--tg-text, #2f2318);
-  font-size: 19px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.tg-solo-option.is-selected {
-  background: var(--tg-button, #b8763c);
-  border-color: var(--tg-button, #b8763c);
-  color: var(--tg-button-text, #fff);
-}
-
-/* ---- Game layout ---- */
+/* ============================ Game layout ============================ */
 
 .tg-game {
   flex: 1;
@@ -137,9 +313,7 @@
   justify-content: center;
 }
 
-.tg-board-stage canvas {
-  touch-action: none;
-}
+.tg-board-stage canvas { touch-action: none; }
 
 /* ---- Player strip ---- */
 
@@ -151,101 +325,89 @@
   scrollbar-width: none;
 }
 
-.tg-player-strip::-webkit-scrollbar {
-  display: none;
-}
+.tg-player-strip::-webkit-scrollbar { display: none; }
 
 .tg-player-chip {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   flex: 1 0 auto;
-  padding: 7px 10px;
+  padding: 7px 11px;
+  border: 1px solid rgba(232, 190, 128, 0.16);
   border-radius: 9px;
-  background: var(--tg-secondary-bg, rgba(233, 214, 186, 0.65));
-  border: 1px solid transparent;
-  font-size: 13px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  color: var(--parchment);
+  font: 600 13px/1 "Crimson Text", Georgia, serif;
   white-space: nowrap;
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .tg-player-chip.is-turn {
-  border-color: var(--turn-color, #d74a43);
   transform: translateY(-1px);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.12), 0 0 16px rgba(0, 0, 0, 0.32);
 }
 
+.tg-player-chip.player-red.is-turn { border-color: var(--tok-red); }
+.tg-player-chip.player-blue.is-turn { border-color: var(--tok-blue); }
+.tg-player-chip.player-green.is-turn { border-color: var(--tok-green); }
+.tg-player-chip.player-yellow.is-turn { border-color: var(--tok-yellow); }
+
+/* Same pawn treatment as the start-screen picker, at chip scale. */
 .tg-player-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+  width: 13px;
+  height: 13px;
   flex: 0 0 auto;
-  background: var(--turn-color, #d74a43);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 -1.5px 2px rgba(0, 0, 0, 0.45),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-.tg-player-chip.player-red .tg-player-dot { background: #d74a43; }
-.tg-player-chip.player-blue .tg-player-dot { background: #3f7cc4; }
-.tg-player-chip.player-green .tg-player-dot { background: #4f9d5a; }
-.tg-player-chip.player-yellow .tg-player-dot { background: #d9ab3c; }
-
-.tg-player-chip.player-red.is-turn { border-color: #d74a43; }
-.tg-player-chip.player-blue.is-turn { border-color: #3f7cc4; }
-.tg-player-chip.player-green.is-turn { border-color: #4f9d5a; }
-.tg-player-chip.player-yellow.is-turn { border-color: #d9ab3c; }
+.tg-player-chip.player-red .tg-player-dot { background: radial-gradient(circle at 34% 28%, #ef8078, var(--tok-red) 55%, #8d2f28); }
+.tg-player-chip.player-blue .tg-player-dot { background: radial-gradient(circle at 34% 28%, #7fb0e8, var(--tok-blue) 55%, #25507f); }
+.tg-player-chip.player-green .tg-player-dot { background: radial-gradient(circle at 34% 28%, #83cf90, var(--tok-green) 55%, #2a6435); }
+.tg-player-chip.player-yellow .tg-player-dot { background: radial-gradient(circle at 34% 28%, #f5dc8a, var(--tok-yellow) 55%, #96751b); }
 
 .tg-player-name {
-  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 11ch;
 }
 
 .tg-player-progress {
+  color: var(--parchment-dim);
   font-variant-numeric: tabular-nums;
-  color: var(--tg-hint, #6b5a45);
+  font-size: 12px;
 }
-
-/* ---- Waiting room ---- */
-
-.tg-waiting-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  margin-top: 4px;
-}
-
-/* ---- Spectating ---- */
 
 .tg-spectating {
   padding: 12px;
   text-align: center;
-  font-size: 14px;
-  color: var(--tg-hint, #6b5a45);
+  color: var(--parchment-dim);
+  font: 400 14px/1.4 "Crimson Text", Georgia, serif;
 }
 
-/* ---- Loading ---- */
+/* ============================== Loading ============================== */
 
 .tg-spinner {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 3px solid var(--tg-hint, #c9a882);
-  border-top-color: transparent;
+  border: 3px solid rgba(240, 180, 94, 0.28);
+  border-top-color: var(--gold);
   animation: tg-spin 0.8s linear infinite;
 }
 
-@keyframes tg-spin {
-  to { transform: rotate(360deg); }
+@keyframes tg-spin { to { transform: rotate(360deg); } }
+
+@keyframes tg-box-arrival {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tg-spinner {
-    animation-duration: 2.4s;
-  }
-
-  .tg-primary-btn,
-  .tg-player-chip {
-    transition: none;
-  }
+  .tg-box { animation: none; }
+  .tg-spinner { animation-duration: 2.4s; }
+  .tg-btn, .tg-seat, .tg-player-chip { transition: none; }
 }

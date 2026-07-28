@@ -74,31 +74,20 @@ export function getWebApp(): TelegramWebApp | null {
   return window.Telegram?.WebApp ?? null;
 }
 
+/** The tabletop the web app is played on - see --wood-dark in src/index.css. */
+const WOOD = "#3d2817";
+
 /**
- * Map Telegram's theme onto CSS custom properties so the existing stylesheets
- * can follow the user's client theme without knowing anything about Telegram.
+ * Push the tabletop colour into Telegram's own chrome.
+ *
+ * The board is a wood-and-cardboard scene in both light and dark clients, so
+ * it deliberately does not follow themeParams - a navy Telegram header above a
+ * brown table looks like two apps stacked. Matching the header and the
+ * pull-to-close backdrop instead makes the Mini App feel like one surface.
  */
-function applyTheme(webApp: TelegramWebApp): void {
-  const root = document.documentElement;
-  const theme = webApp.themeParams ?? {};
-
-  const vars: Array<[string, string | undefined]> = [
-    ["--tg-bg", theme.bg_color],
-    ["--tg-text", theme.text_color],
-    ["--tg-hint", theme.hint_color],
-    ["--tg-link", theme.link_color],
-    ["--tg-button", theme.button_color],
-    ["--tg-button-text", theme.button_text_color],
-    ["--tg-secondary-bg", theme.secondary_bg_color],
-  ];
-
-  for (const [name, value] of vars) {
-    if (value) root.style.setProperty(name, value);
-  }
-
-  if (webApp.colorScheme) {
-    root.dataset.tgTheme = webApp.colorScheme;
-  }
+function applyChrome(webApp: TelegramWebApp): void {
+  webApp.setHeaderColor?.(WOOD);
+  webApp.setBackgroundColor?.(WOOD);
 }
 
 /**
@@ -131,10 +120,11 @@ export function setupWebApp(webApp: TelegramWebApp): () => void {
   webApp.expand?.();
   webApp.disableVerticalSwipes?.();
 
-  applyTheme(webApp);
+  applyChrome(webApp);
   applySafeArea(webApp);
 
-  const onThemeChanged = () => applyTheme(webApp);
+  // Telegram resets its chrome colours when the user switches theme mid-session.
+  const onThemeChanged = () => applyChrome(webApp);
   const onViewportChanged = () => applySafeArea(webApp);
 
   webApp.onEvent?.("themeChanged", onThemeChanged);

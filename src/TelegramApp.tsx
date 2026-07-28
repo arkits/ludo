@@ -37,36 +37,77 @@ function Splash() {
   );
 }
 
+/**
+ * Seat colours are assigned in join order by the server, so a preview built
+ * from the same order shows the table you will actually sit down at.
+ * See COLORS in convex/telegram/match.ts.
+ */
+const SEAT_COLORS = ['red', 'blue', 'green', 'yellow'] as const;
+
 function SoloMenu({ onStart }: { onStart: (botCount: number) => void }) {
   const [botCount, setBotCount] = useState(3);
 
   return (
-    <div className="tg-notice">
-      <h1 className="tg-notice-title">Ludo</h1>
-      <p className="tg-notice-body">Play against bots, or add the bot to a group chat to play with friends.</p>
+    <div className="tg-start">
+      <div className="tg-box">
+        <div className="tg-box-inner">
+          <span className="tg-screw" />
+          <span className="tg-screw" />
+          <span className="tg-screw" />
+          <span className="tg-screw" />
 
-      <div className="tg-solo-picker">
-        <span className="tg-solo-label">Opponents</span>
-        <div className="tg-solo-options">
-          {[1, 2, 3].map((count) => (
-            <button
-              key={count}
-              type="button"
-              className={`tg-solo-option${botCount === count ? ' is-selected' : ''}`}
-              onClick={() => {
-                setBotCount(count);
-                haptic('light');
-              }}
-            >
-              {count}
-            </button>
-          ))}
+          <p className="tg-kicker">The classic race home</p>
+          <h1 className="tg-logo">LUDO</h1>
+          <p className="tg-logo-sub">Tabletop Edition</p>
+
+          <div className="tg-rule" />
+
+          <span className="tg-field-label" id="tg-opponents-label">
+            Who's playing
+          </span>
+
+          <div className="tg-seats" role="radiogroup" aria-labelledby="tg-opponents-label">
+            {[1, 2, 3].map((count) => (
+              <button
+                key={count}
+                type="button"
+                role="radio"
+                aria-checked={botCount === count}
+                className="tg-seat"
+                onClick={() => {
+                  setBotCount(count);
+                  haptic('light');
+                }}
+              >
+                <span className="tg-seat-pawns" aria-hidden="true">
+                  <span className="tg-pawn tok-red is-you" />
+                  {SEAT_COLORS.slice(1, count + 1).map((color) => (
+                    <span key={color} className={`tg-pawn tok-${color}`} />
+                  ))}
+                </span>
+                <span>
+                  {count} bot{count > 1 ? 's' : ''}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            className="tg-btn"
+            onClick={() => {
+              haptic('medium');
+              onStart(botCount);
+            }}
+          >
+            Roll out
+          </button>
+
+          <p className="tg-hint">
+            Playing with friends? Add the bot to a group chat and send <code>/ludo</code>.
+          </p>
         </div>
       </div>
-
-      <button type="button" className="tg-primary-btn" onClick={() => onStart(botCount)}>
-        Start game
-      </button>
     </div>
   );
 }
@@ -123,7 +164,7 @@ function WaitingInChat({ players }: { players: Player[] }) {
 
       <button
         type="button"
-        className="tg-primary-btn"
+        className="tg-btn"
         onClick={() => getWebApp()?.close?.()}
       >
         Back to chat
@@ -160,7 +201,7 @@ function TelegramBoard({ readOnly }: { readOnly: boolean }) {
         </p>
         <button
           type="button"
-          className="tg-primary-btn"
+          className="tg-btn"
           onClick={() => getWebApp()?.close?.()}
         >
           Back to chat
