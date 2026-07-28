@@ -66,7 +66,7 @@ export default function BoardScene(props: BoardSceneProps) {
       />
       {/* Rim light tinted to the active player */}
       <pointLight position={[0, 6, -12]} intensity={0.5} color={rim} />
-      <Board3D />
+      <Board3D activeCorner={props.activeCorner} reducedMotion={reducedMotion} />
       {props.players.map((player) =>
         player.tokens.map((token) => (
           <Pawn
