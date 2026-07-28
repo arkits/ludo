@@ -6,6 +6,7 @@ import { botToken, boardLink } from "./config";
 import { renderMatchText, renderMatchKeyboard, renderTurnPing } from "./render";
 import { nextIdleAction, IDLE_HANDOFF_MS } from "./idle";
 import type { MatchView } from "./render";
+import type { MessageTarget } from "./api";
 
 /**
  * Delivery of everything a Telegram match puts in chat: the live status board
@@ -26,9 +27,10 @@ const STATUS_EDIT_THROTTLE_MS = 3_000;
 interface MatchSnapshot {
   view: MatchView;
   telegram: {
-    chatId: number;
-    chatType: "private" | "group" | "supergroup";
+    chatId?: number;
+    chatType: "private" | "group" | "supergroup" | "inline";
     lobbyMessageId?: number;
+    inlineMessageId?: string;
     statusEditedAt?: number;
     statusText?: string;
   };
@@ -39,6 +41,22 @@ interface MatchSnapshot {
     telegramUserId?: number;
     playerIndex: number;
   } | null;
+}
+
+/**
+ * Which message represents this match, if any. Solo matches have none; inline
+ * matches have only an inline id, which can be edited but never replied to.
+ */
+export function messageTarget(
+  telegram: MatchSnapshot["telegram"]
+): MessageTarget | null {
+  if (telegram.inlineMessageId !== undefined) {
+    return { kind: "inline", inlineMessageId: telegram.inlineMessageId };
+  }
+  if (telegram.chatId !== undefined && telegram.lobbyMessageId !== undefined) {
+    return { kind: "chat", chatId: telegram.chatId, messageId: telegram.lobbyMessageId };
+  }
+  return null;
 }
 
 /** Persist what we last rendered, so identical renders skip the API entirely. */
@@ -82,7 +100,8 @@ export const refreshBoard = internalAction({
     const { telegram, view } = snapshot;
 
     // Solo matches have a chat but no message - nothing to keep in sync.
-    if (telegram.lobbyMessageId === undefined) return null;
+    const target = messageTarget(telegram);
+    if (!target) return null;
 
     const text = renderMatchText(view);
 
@@ -104,8 +123,7 @@ export const refreshBoard = internalAction({
 
     const api = createTelegramApi(botToken());
     const edited = await api.editMessageText({
-      chatId: telegram.chatId,
-      messageId: telegram.lobbyMessageId,
+      target,
       text,
       replyMarkup: renderMatchKeyboard(view, boardLink()),
     });
@@ -148,6 +166,8 @@ export const checkIdle = internalAction({
     // waiting, and the player is the only human.
     if (snapshot.telegram.chatType === "private") return null;
 
+    const chatId = snapshot.telegram.chatId;
+
     const decision = nextIdleAction({
       gameState: snapshot.view.gameState,
       turnStartedAt: snapshot.turnStartedAt,
@@ -155,43 +175,52 @@ export const checkIdle = internalAction({
       stage: args.stage,
       currentSeatIsBot: snapshot.currentSeat.isBot,
       currentSeatTelegramUserId: snapshot.currentSeat.telegramUserId,
+      // An inline-created match has no chat id, so there is nowhere to send.
+      canPing: chatId !== undefined,
     });
 
     if (decision.action === "skip") return null;
 
-    if (decision.action === "ping") {
-      const seat = snapshot.currentSeat;
-      const api = createTelegramApi(botToken());
-      const ping = renderTurnPing(seat.nickname, seat.telegramUserId!);
+    const armHandoff = () =>
+      ctx.scheduler.runAfter(IDLE_HANDOFF_MS, internal.telegram.notify.checkIdle, {
+        roomId: args.roomId,
+        expectedTurnStartedAt: args.expectedTurnStartedAt,
+        stage: "handoff" as const,
+      });
 
+    // Nothing to send, but the game still has to escalate.
+    if (decision.action === "escalate") {
+      await armHandoff();
+      return null;
+    }
+
+    const api = createTelegramApi(botToken());
+    const seat = snapshot.currentSeat;
+
+    if (decision.action === "ping") {
+      const ping = renderTurnPing(seat.nickname, seat.telegramUserId!);
       await api.sendMessage({
-        chatId: snapshot.telegram.chatId,
+        chatId: chatId!,
         text: ping.text,
         entities: ping.entities,
       });
-
-      await ctx.scheduler.runAfter(
-        IDLE_HANDOFF_MS,
-        internal.telegram.notify.checkIdle,
-        {
-          roomId: args.roomId,
-          expectedTurnStartedAt: args.expectedTurnStartedAt,
-          stage: "handoff",
-        }
-      );
+      await armHandoff();
       return null;
     }
 
     await ctx.runMutation(internal.telegram.match.handoffToBot, {
       roomId: args.roomId,
-      playerIndex: snapshot.currentSeat.playerIndex,
+      playerIndex: seat.playerIndex,
     });
 
-    const api = createTelegramApi(botToken());
-    await api.sendMessage({
-      chatId: snapshot.telegram.chatId,
-      text: `${snapshot.currentSeat.nickname} is away — a bot is playing their turns. They can take their seat back any time by opening the board.`,
-    });
+    // The board itself always shows the 🤖 marker after a handoff; this
+    // message is a courtesy that only a chat-backed game can deliver.
+    if (chatId !== undefined) {
+      await api.sendMessage({
+        chatId,
+        text: `${seat.nickname} is away — a bot is playing their turns. They can take their seat back any time by opening the board.`,
+      });
+    }
 
     return null;
   },

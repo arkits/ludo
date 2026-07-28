@@ -98,14 +98,34 @@ npx convex env set TELEGRAM_WEBHOOK_SECRET <any-random-string>
    `.convex.site` URL, so no tunnel is needed even in development:
 
 ```bash
-curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" -d "url=https://<deployment>.convex.site/telegram/webhook" -d "secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" -d "url=https://<deployment>.convex.site/telegram/webhook" -d "secret_token=<TELEGRAM_WEBHOOK_SECRET>" -d 'allowed_updates=["message","callback_query","inline_query","chosen_inline_result"]'
 ```
 
-4. In BotFather, enable `/setjoingroups` and disable `/setprivacy` (or make the
-   bot a group admin) so it can see `/ludo` in group chats.
+`allowed_updates` is a replace, not a merge — omitting `inline_query` or
+`chosen_inline_result` silently disables inline mode.
 
-Then send `/ludo` in a group to open a lobby, or `/play` in a direct message
-for a solo game.
+4. In BotFather, enable `/setjoingroups` so the bot can be added to groups.
+   Privacy mode can stay on — commands and callback queries both reach the bot
+   regardless.
+5. For inline mode (starting a game without adding the bot to the chat), enable
+   both `/setinline` (any placeholder text) and **`/setinlinefeedback`**. The
+   second one is not optional: without it Telegram never sends
+   `chosen_inline_result`, so the bot never learns the `inline_message_id` and
+   the game it just created would be unreachable.
+
+### Ways to start a game
+
+| | How | Turn pings |
+| --- | --- | --- |
+| Group | Add the bot, send `/ludo` | Yes |
+| Any chat | Type `@yourbot ` and pick the result | **No** |
+| Solo | `/play`, or the bot's menu button | n/a |
+
+Inline mode posts the game as a message from *you*, so the bot is never added
+to the chat. The trade-off is structural: an inline message carries no chat id,
+so the bot can edit that message forever but can never send a new one into the
+chat. Those games still show a live status board and still hand a stalled seat
+to the AI — they just cannot ping anyone first.
 
 ## How to Play
 

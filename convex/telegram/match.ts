@@ -17,7 +17,8 @@ const COLORS: PlayerColor[] = ["red", "blue", "green", "yellow"];
 const chatTypeValidator = v.union(
   v.literal("private"),
   v.literal("group"),
-  v.literal("supergroup")
+  v.literal("supergroup"),
+  v.literal("inline")
 );
 
 /** Result shape shared by every lobby button. `message` is shown as a toast. */
@@ -179,6 +180,59 @@ export const createLobby = internalMutation({
     });
 
     return { ok: true as const, roomId };
+  },
+});
+
+/**
+ * Create a lobby for a game started through inline mode, seating the person
+ * who started it as host.
+ *
+ * Unlike createLobby there is no "one live game per chat" check: the bot never
+ * learns which chat an inline message landed in, so it cannot know what else
+ * is running there. Each invocation is its own game.
+ */
+export const createInlineLobby = internalMutation({
+  args: {
+    inlineMessageId: v.string(),
+    telegramUserId: v.number(),
+    nickname: v.string(),
+  },
+  returns: v.object({ roomId: v.string() }),
+  handler: async (ctx, args) => {
+    const roomId = await allocateRoomId(ctx);
+
+    await ctx.db.insert("rooms", {
+      roomId,
+      passwordHash: null,
+      maxPlayers: MAX_PLAYERS,
+      gameState: "waiting",
+      currentPlayerIndex: 0,
+      diceValue: 0,
+      hasRolledDice: false,
+      consecutiveSixes: 0,
+      lastMove: null,
+      winnerId: null,
+      createdAt: Date.now(),
+      telegram: {
+        chatType: "inline",
+        inlineMessageId: args.inlineMessageId,
+      },
+    });
+
+    await ctx.db.insert("players", {
+      roomId,
+      playerId: `tg_${args.telegramUserId}`,
+      nickname: args.nickname,
+      color: COLORS[0],
+      tokens: [],
+      isReady: true,
+      playerIndex: 0,
+      isBot: false,
+      authToken: crypto.randomUUID(),
+      telegramUserId: args.telegramUserId,
+    });
+
+    return { roomId };
   },
 });
 

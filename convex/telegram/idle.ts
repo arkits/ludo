@@ -21,6 +21,8 @@ export type IdleStage = "ping" | "handoff";
 export type IdleDecision =
   | { action: "skip"; reason: string }
   | { action: "ping" }
+  /** Cannot ping here - arm the handoff timer without sending anything. */
+  | { action: "escalate" }
   | { action: "handoff" };
 
 export interface IdleInput {
@@ -34,6 +36,13 @@ export interface IdleInput {
   currentSeatIsBot: boolean;
   /** Absent for a seat with no Telegram identity - nobody to ping. */
   currentSeatTelegramUserId: number | undefined;
+  /**
+   * Whether the bot can send a message into this game's chat at all. False
+   * for inline-created matches: the bot holds an inline_message_id it can
+   * edit, but no chat id, so there is nowhere to send a ping. Those games
+   * still hand off to the AI, just without warning anyone first.
+   */
+  canPing: boolean;
 }
 
 export function nextIdleAction(input: IdleInput): IdleDecision {
@@ -53,8 +62,14 @@ export function nextIdleAction(input: IdleInput): IdleDecision {
   }
 
   if (input.stage === "ping") {
+    // Both of these mean "no ping is possible" rather than "stop": the game
+    // must still escalate, or a game whose player walked away would sit on
+    // their turn forever.
+    if (!input.canPing) {
+      return { action: "escalate" };
+    }
     if (input.currentSeatTelegramUserId === undefined) {
-      return { action: "skip", reason: "seat has no Telegram user to ping" };
+      return { action: "escalate" };
     }
     return { action: "ping" };
   }

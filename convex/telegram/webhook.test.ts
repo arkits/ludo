@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { handleUpdate, parseCommand, type UpdateHandlerDeps } from "./webhook";
+import {
+  handleUpdate,
+  parseCommand,
+  INLINE_NEW_GAME,
+  type UpdateHandlerDeps,
+} from "./webhook";
 import type { MatchView } from "./render";
 
 const BOARD_LINK = { botUsername: "LudoTestBot", appShortName: "play" };
@@ -20,10 +25,16 @@ function seat(nickname: string, color: MatchView["seats"][number]["color"]) {
   return { nickname, color, isBot: false, finishedTokens: 0 };
 }
 
+type EditRecord = {
+  target: NonNullable<Parameters<UpdateHandlerDeps['api']['editMessageText']>[0]>['target'];
+  text: string;
+};
+
 function makeDeps(overrides: Partial<UpdateHandlerDeps> = {}) {
   const sent: Array<{ chatId: number; text: string }> = [];
-  const edited: Array<{ chatId: number; messageId: number; text: string }> = [];
+  const edited: EditRecord[] = [];
   const answered: Array<{ callbackQueryId: string; text?: string }> = [];
+  const inlineAnswers: Array<{ inlineQueryId: string; ids: string[]; isPersonal?: boolean; cacheTime?: number }> = [];
 
   const deps: UpdateHandlerDeps = {
     api: {
@@ -32,11 +43,19 @@ function makeDeps(overrides: Partial<UpdateHandlerDeps> = {}) {
         return 555;
       }),
       editMessageText: vi.fn(async (args) => {
-        edited.push({ chatId: args.chatId, messageId: args.messageId, text: args.text });
+        edited.push({ target: args.target, text: args.text });
         return true;
       }),
       answerCallbackQuery: vi.fn(async (args) => {
         answered.push({ callbackQueryId: args.callbackQueryId, text: args.text });
+      }),
+      answerInlineQuery: vi.fn(async (args) => {
+        inlineAnswers.push({
+          inlineQueryId: args.inlineQueryId,
+          ids: args.results.map((r: { id: string }) => r.id),
+          isPersonal: args.isPersonal,
+          cacheTime: args.cacheTime,
+        });
       }),
     },
     boardLink: BOARD_LINK,
@@ -47,10 +66,11 @@ function makeDeps(overrides: Partial<UpdateHandlerDeps> = {}) {
     addBot: vi.fn(async () => ({ ok: true, message: "Bot added 🤖" })),
     startMatch: vi.fn(async () => ({ ok: true, message: "Game on 🎲" })),
     matchView: vi.fn(async () => waitingView()),
+    createInlineLobby: vi.fn(async () => ({ roomId: "INL456" })),
     ...overrides,
   };
 
-  return { deps, sent, edited, answered };
+  return { deps, sent, edited, answered, inlineAnswers };
 }
 
 function groupMessage(text: string, chatId = -100) {
@@ -200,7 +220,11 @@ describe("handleUpdate — lobby buttons", () => {
     await handleUpdate(callback("join:ABC123"), harness.deps);
 
     expect(harness.edited).toHaveLength(1);
-    expect(harness.edited[0].messageId).toBe(555);
+    expect(harness.edited[0].target).toEqual({
+      kind: "chat",
+      chatId: -100,
+      messageId: 555,
+    });
     expect(harness.edited[0].text).toContain("Ada");
     expect(harness.edited[0].text).toContain("1/4");
   });
@@ -272,6 +296,143 @@ describe("handleUpdate — lobby buttons", () => {
     );
 
     expect(harness.answered).toEqual([{ callbackQueryId: "cbq-2", text: undefined }]);
+  });
+});
+
+describe("handleUpdate — inline mode", () => {
+  const inlineQuery = {
+    inline_query: { id: "iq-1", from: { id: 7, first_name: "Ada" }, query: "" },
+  };
+
+  it("offers a single start-a-game result", async () => {
+    const { deps, inlineAnswers } = makeDeps();
+
+    await handleUpdate(inlineQuery, deps);
+
+    expect(inlineAnswers).toHaveLength(1);
+    expect(inlineAnswers[0].inlineQueryId).toBe("iq-1");
+    expect(inlineAnswers[0].ids).toEqual([INLINE_NEW_GAME]);
+  });
+
+  it("never lets a result be cached or shared between users", async () => {
+    const { deps, inlineAnswers } = makeDeps();
+
+    await handleUpdate(inlineQuery, deps);
+
+    expect(inlineAnswers[0].isPersonal).toBe(true);
+    expect(inlineAnswers[0].cacheTime).toBe(0);
+  });
+
+  it("creates a game seated to whoever picked the result", async () => {
+    const { deps } = makeDeps();
+
+    await handleUpdate(
+      {
+        chosen_inline_result: {
+          result_id: INLINE_NEW_GAME,
+          from: { id: 7, first_name: "Ada", last_name: "Lovelace" },
+          inline_message_id: "inline-abc",
+          query: "",
+        },
+      },
+      deps
+    );
+
+    expect(deps.createInlineLobby).toHaveBeenCalledWith("inline-abc", 7, "Ada Lovelace");
+  });
+
+  it("replaces the placeholder message with the real lobby", async () => {
+    const { deps, edited } = makeDeps();
+
+    await handleUpdate(
+      {
+        chosen_inline_result: {
+          result_id: INLINE_NEW_GAME,
+          from: { id: 7, first_name: "Ada" },
+          inline_message_id: "inline-abc",
+          query: "",
+        },
+      },
+      deps
+    );
+
+    expect(edited).toHaveLength(1);
+    expect(edited[0].target).toEqual({ kind: "inline", inlineMessageId: "inline-abc" });
+    expect(edited[0].text).toContain("Ludo");
+  });
+
+  // Without /setinlinefeedback the id never arrives and the message could
+  // never be edited, leaving an unreachable game.
+  it("creates nothing when inline feedback is disabled", async () => {
+    const { deps, edited } = makeDeps();
+
+    await handleUpdate(
+      {
+        chosen_inline_result: {
+          result_id: INLINE_NEW_GAME,
+          from: { id: 7, first_name: "Ada" },
+          query: "",
+        },
+      },
+      deps
+    );
+
+    expect(deps.createInlineLobby).not.toHaveBeenCalled();
+    expect(edited).toHaveLength(0);
+  });
+
+  it("ignores a chosen result it did not offer", async () => {
+    const { deps } = makeDeps();
+
+    await handleUpdate(
+      {
+        chosen_inline_result: {
+          result_id: "something_else",
+          from: { id: 7, first_name: "Ada" },
+          inline_message_id: "inline-abc",
+          query: "",
+        },
+      },
+      deps
+    );
+
+    expect(deps.createInlineLobby).not.toHaveBeenCalled();
+  });
+
+  // A callback from an inline message has inline_message_id and no `message`.
+  it("handles a Join tapped on an inline message", async () => {
+    const { deps, edited, answered } = makeDeps();
+
+    await handleUpdate(
+      {
+        callback_query: {
+          id: "cbq-9",
+          from: { id: 99, first_name: "Sam" },
+          data: "join:INL456",
+          inline_message_id: "inline-abc",
+        },
+      },
+      deps
+    );
+
+    expect(deps.joinLobby).toHaveBeenCalledWith("INL456", 99, "Sam");
+    expect(answered[0].text).toBe("You're in 🎲");
+    expect(edited[0].target).toEqual({ kind: "inline", inlineMessageId: "inline-abc" });
+  });
+
+  it("answers an inline callback carrying neither message nor inline id", async () => {
+    const { deps, answered, edited } = makeDeps();
+
+    await handleUpdate(
+      {
+        callback_query: { id: "cbq-10", from: { id: 7, first_name: "Ada" }, data: "join:X" },
+      },
+      deps
+    );
+
+    expect(answered).toHaveLength(1);
+    expect(edited).toHaveLength(0);
+    expect(deps.joinLobby).not.toHaveBeenCalled();
   });
 });
 

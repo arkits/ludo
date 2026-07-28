@@ -41,15 +41,22 @@ export default defineSchema({
     // refuses it outright so web players can never wander in.
     telegram: v.optional(
       v.object({
-        chatId: v.number(),
+        // Absent for inline-created matches: an inline message carries no
+        // chat id, so the bot can edit that message but can never send a new
+        // one into the chat (which is why those games get no turn pings).
+        chatId: v.optional(v.number()),
         chatType: v.union(
           v.literal("private"),
           v.literal("group"),
-          v.literal("supergroup")
+          v.literal("supergroup"),
+          v.literal("inline")
         ),
         // The lobby message, which becomes the live status board once the
-        // game starts. Absent for solo matches, which have no chat presence.
+        // game starts. Exactly one of these identifies it: lobbyMessageId for
+        // a message the bot posted, inlineMessageId for one posted through
+        // inline mode. Both absent for solo, which has no chat presence.
         lobbyMessageId: v.optional(v.number()),
+        inlineMessageId: v.optional(v.string()),
         // Throttling state for status-board edits.
         statusEditedAt: v.optional(v.number()),
         statusText: v.optional(v.string()),

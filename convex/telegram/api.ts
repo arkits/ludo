@@ -26,11 +26,37 @@ export interface SendMessageArgs {
   entities?: MessageEntity[];
 }
 
+/**
+ * Which message to edit. A bot-posted message is addressed by chat + message
+ * id; a message posted through inline mode only ever has an inline id, and
+ * the bot never learns which chat it landed in.
+ */
+export type MessageTarget =
+  | { kind: "chat"; chatId: number; messageId: number }
+  | { kind: "inline"; inlineMessageId: string };
+
 export interface EditMessageTextArgs {
-  chatId: number;
-  messageId: number;
+  target: MessageTarget;
   text: string;
   replyMarkup?: InlineKeyboard;
+}
+
+export interface InlineQueryResultArticle {
+  type: "article";
+  id: string;
+  title: string;
+  description?: string;
+  thumbnail_url?: string;
+  input_message_content: { message_text: string };
+  reply_markup?: { inline_keyboard: InlineKeyboard };
+}
+
+export interface AnswerInlineQueryArgs {
+  inlineQueryId: string;
+  results: InlineQueryResultArticle[];
+  /** Results are per-user and must never be cached across users. */
+  isPersonal?: boolean;
+  cacheTime?: number;
 }
 
 export interface AnswerCallbackQueryArgs {
@@ -45,6 +71,7 @@ export interface TelegramApi {
   /** Resolves whether the edit landed. A no-op edit counts as success. */
   editMessageText(args: EditMessageTextArgs): Promise<boolean>;
   answerCallbackQuery(args: AnswerCallbackQueryArgs): Promise<void>;
+  answerInlineQuery(args: AnswerInlineQueryArgs): Promise<void>;
 }
 
 /**
@@ -96,10 +123,14 @@ export function createTelegramApi(botToken: string): TelegramApi {
       return result.result.message_id;
     },
 
-    async editMessageText({ chatId, messageId, text, replyMarkup }) {
+    async editMessageText({ target, text, replyMarkup }) {
+      const address =
+        target.kind === "chat"
+          ? { chat_id: target.chatId, message_id: target.messageId }
+          : { inline_message_id: target.inlineMessageId };
+
       const result = await call("editMessageText", {
-        chat_id: chatId,
-        message_id: messageId,
+        ...address,
         text,
         reply_markup: replyMarkup ? { inline_keyboard: replyMarkup } : undefined,
       });
@@ -123,6 +154,18 @@ export function createTelegramApi(botToken: string): TelegramApi {
       });
       if (!result.ok) {
         console.error("telegram answerCallbackQuery failed:", result.description);
+      }
+    },
+
+    async answerInlineQuery({ inlineQueryId, results, isPersonal, cacheTime }) {
+      const result = await call("answerInlineQuery", {
+        inline_query_id: inlineQueryId,
+        results,
+        is_personal: isPersonal,
+        cache_time: cacheTime,
+      });
+      if (!result.ok) {
+        console.error("telegram answerInlineQuery failed:", result.description);
       }
     },
   };

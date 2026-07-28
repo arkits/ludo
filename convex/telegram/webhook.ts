@@ -6,7 +6,7 @@
  * mutations, with no network and no Convex runtime (see webhook.test.ts).
  */
 
-import type { TelegramApi } from "./api";
+import type { TelegramApi, MessageTarget } from "./api";
 import {
   renderMatchText,
   renderMatchKeyboard,
@@ -38,13 +38,31 @@ export interface TelegramCallbackQuery {
   id: string;
   from: TelegramFrom;
   data?: string;
+  /** Present for messages the bot posted. */
   message?: TelegramMessage;
+  /** Present instead of `message` when the button is on an inline result. */
+  inline_message_id?: string;
+}
+
+export interface TelegramInlineQuery {
+  id: string;
+  from: TelegramFrom;
+  query: string;
+}
+
+export interface TelegramChosenInlineResult {
+  result_id: string;
+  from: TelegramFrom;
+  inline_message_id?: string;
+  query: string;
 }
 
 export interface TelegramUpdate {
   update_id?: number;
   message?: TelegramMessage;
   callback_query?: TelegramCallbackQuery;
+  inline_query?: TelegramInlineQuery;
+  chosen_inline_result?: TelegramChosenInlineResult;
 }
 
 export interface LobbyResult {
@@ -65,14 +83,25 @@ export interface UpdateHandlerDeps {
   addBot(roomId: string, userId: number): Promise<LobbyResult>;
   startMatch(roomId: string, userId: number): Promise<LobbyResult>;
   matchView(roomId: string): Promise<MatchView | null>;
+  createInlineLobby(
+    inlineMessageId: string,
+    userId: number,
+    nickname: string
+  ): Promise<{ roomId: string }>;
 }
 
-const HELP_TEXT = [
-  "🎲 *Ludo*",
-  "",
-  "/ludo — start a game in this chat",
-  "/play — play solo against bots",
-].join("\n");
+/** The id of the single inline result the bot offers. */
+export const INLINE_NEW_GAME = "ludo_new_game";
+
+const helpText = (botUsername: string) =>
+  [
+    "🎲 Ludo",
+    "",
+    "/ludo — start a game in this chat",
+    "/play — play solo against bots",
+    "",
+    `Or type @${botUsername} in any chat to start a game without adding the bot to it.`,
+  ].join("\n");
 
 function displayNameFrom(from: TelegramFrom): string {
   const full = [from.first_name, from.last_name].filter(Boolean).join(" ").trim();
@@ -136,21 +165,84 @@ async function openLobby(
   }
 }
 
+
 /** Re-render an existing lobby/status message in place. */
 async function rerender(
   deps: UpdateHandlerDeps,
   roomId: string,
-  chatId: number,
-  messageId: number
+  target: MessageTarget
 ): Promise<void> {
   const view = await deps.matchView(roomId);
   if (!view) return;
 
   await deps.api.editMessageText({
-    chatId,
-    messageId,
+    target,
     text: renderMatchText(view),
     replyMarkup: renderMatchKeyboard(view, deps.boardLink),
+  });
+}
+
+/**
+ * Offer a single "start a game" result.
+ *
+ * The posted message is a placeholder: the real roster and buttons need a
+ * roomId, which cannot exist until the user actually picks the result. The
+ * chosen_inline_result handler creates the game and edits this text away
+ * immediately.
+ */
+async function handleInlineQuery(
+  deps: UpdateHandlerDeps,
+  query: TelegramInlineQuery
+): Promise<void> {
+  await deps.api.answerInlineQuery({
+    inlineQueryId: query.id,
+    // Per-user and uncached: the result creates a game keyed to whoever picks
+    // it, so it must never be served from another user's cache.
+    isPersonal: true,
+    cacheTime: 0,
+    results: [
+      {
+        type: "article",
+        id: INLINE_NEW_GAME,
+        title: "🎲 Start a game of Ludo",
+        description: "Up to 4 players — no need to add the bot to the group",
+        input_message_content: {
+          message_text: `🎲 ${displayNameFrom(query.from)} started a game of Ludo\n\nSetting up…`,
+        },
+      },
+    ],
+  });
+}
+
+/**
+ * The user picked the inline result and Telegram posted it on their behalf.
+ * This is the only moment the bot learns the inline_message_id, and the only
+ * handle it will ever have on that message.
+ */
+async function handleChosenInlineResult(
+  deps: UpdateHandlerDeps,
+  chosen: TelegramChosenInlineResult
+): Promise<void> {
+  if (chosen.result_id !== INLINE_NEW_GAME) return;
+
+  // Absent when inline feedback is disabled in BotFather, in which case the
+  // message can never be edited and the game would be unreachable.
+  if (!chosen.inline_message_id) {
+    console.error(
+      "chosen_inline_result had no inline_message_id; enable /setinlinefeedback"
+    );
+    return;
+  }
+
+  const { roomId } = await deps.createInlineLobby(
+    chosen.inline_message_id,
+    chosen.from.id,
+    displayNameFrom(chosen.from)
+  );
+
+  await rerender(deps, roomId, {
+    kind: "inline",
+    inlineMessageId: chosen.inline_message_id,
   });
 }
 
@@ -185,7 +277,10 @@ async function handleMessage(
 
     case "start":
     case "help":
-      await deps.api.sendMessage({ chatId: message.chat.id, text: HELP_TEXT });
+      await deps.api.sendMessage({
+        chatId: message.chat.id,
+        text: helpText(deps.boardLink.botUsername),
+      });
       return;
 
     default:
@@ -204,21 +299,34 @@ async function handleCallbackQuery(
   };
 
   const parsed = query.data ? parseCallbackData(query.data) : null;
-  if (!parsed || !query.message) {
+
+  // A callback carries either `message` (bot-posted) or `inline_message_id`
+  // (posted through inline mode) - never both.
+  const target: MessageTarget | null = query.message
+    ? {
+        kind: "chat",
+        chatId: query.message.chat.id,
+        messageId: query.message.message_id,
+      }
+    : query.inline_message_id
+      ? { kind: "inline", inlineMessageId: query.inline_message_id }
+      : null;
+
+  if (!parsed || !target) {
     await answer();
     return;
   }
 
   const { action, roomId } = parsed;
-  const chatId = query.message.chat.id;
-  const messageId = query.message.message_id;
   // callback_query.from is authenticated by Telegram, so this id can be
   // trusted as the acting user without any further proof.
   const userId = query.from.id;
 
   if (action === "new") {
     await answer();
-    await openLobby(deps, query.message.chat);
+    if (query.message) {
+      await openLobby(deps, query.message.chat);
+    }
     return;
   }
 
@@ -245,7 +353,7 @@ async function handleCallbackQuery(
   await answer(result.message);
 
   if (result.ok) {
-    await rerender(deps, roomId, chatId, messageId);
+    await rerender(deps, roomId, target);
   }
 }
 
@@ -255,6 +363,16 @@ export async function handleUpdate(
 ): Promise<void> {
   if (update.callback_query) {
     await handleCallbackQuery(deps, update.callback_query);
+    return;
+  }
+
+  if (update.inline_query) {
+    await handleInlineQuery(deps, update.inline_query);
+    return;
+  }
+
+  if (update.chosen_inline_result) {
+    await handleChosenInlineResult(deps, update.chosen_inline_result);
     return;
   }
 

@@ -93,6 +93,13 @@ const telegramWebhook = httpAction(async (ctx, request) => {
         });
         return (snapshot?.view ?? null) as MatchView | null;
       },
+
+      createInlineLobby: (inlineMessageId, userId, nickname) =>
+        ctx.runMutation(internal.telegram.match.createInlineLobby, {
+          inlineMessageId,
+          telegramUserId: userId,
+          nickname,
+        }),
     });
   } catch (error) {
     // Never return non-200 for a handler bug: Telegram would redeliver the

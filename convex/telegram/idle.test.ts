@@ -11,6 +11,7 @@ function input(overrides: Partial<IdleInput> = {}): IdleInput {
     stage: "ping",
     currentSeatIsBot: false,
     currentSeatTelegramUserId: 42,
+    canPing: true,
     ...overrides,
   };
 }
@@ -68,13 +69,32 @@ describe("nextIdleAction", () => {
     expect(decision.action).toBe("skip");
   });
 
-  it("skips the ping for a seat with no Telegram identity", () => {
+  // "Cannot ping" must never mean "stop": a game whose player walked away
+  // would otherwise sit on their turn forever.
+  it("escalates instead of pinging a seat with no Telegram identity", () => {
     const decision = nextIdleAction(input({ currentSeatTelegramUserId: undefined }));
 
-    expect(decision).toEqual({
-      action: "skip",
-      reason: "seat has no Telegram user to ping",
-    });
+    expect(decision).toEqual({ action: "escalate" });
+  });
+
+  it("escalates instead of pinging when the chat cannot be messaged", () => {
+    const decision = nextIdleAction(input({ canPing: false }));
+
+    expect(decision).toEqual({ action: "escalate" });
+  });
+
+  it("still hands off in a chat that cannot be messaged", () => {
+    const decision = nextIdleAction(input({ stage: "handoff", canPing: false }));
+
+    expect(decision).toEqual({ action: "handoff" });
+  });
+
+  it("does not escalate a stale check just because pinging is impossible", () => {
+    const decision = nextIdleAction(
+      input({ canPing: false, turnStartedAt: TURN_STAMP + 5_000 })
+    );
+
+    expect(decision.action).toBe("skip");
   });
 
   it("still hands off a seat with no Telegram identity, so play never deadlocks", () => {
@@ -83,5 +103,9 @@ describe("nextIdleAction", () => {
     );
 
     expect(decision).toEqual({ action: "handoff" });
+  });
+
+  it("never pings a bot seat even when everything else allows it", () => {
+    expect(nextIdleAction(input({ currentSeatIsBot: true })).action).toBe("skip");
   });
 });
