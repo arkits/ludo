@@ -148,6 +148,14 @@
   vertical-align: middle;
 }
 
+/* Touch devices have no space bar — drop the hint rather than promise a key
+   that isn't there. */
+@media (hover: none) and (pointer: coarse) {
+  .key-hint {
+    display: none;
+  }
+}
+
 .dice-help-text {
   display: none;
   /* Hide old text if present */
