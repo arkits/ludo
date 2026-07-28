@@ -399,6 +399,20 @@ export const botPlay = internalMutation({
 
     players.sort((a, b) => a.playerIndex - b.playerIndex);
 
+    // Nobody human is left to watch. Without this the bots keep playing each
+    // other indefinitely, rescheduling themselves forever and rewriting the
+    // chat status board the whole time. Reached when every seat has been
+    // handed to the AI by idle escalation, or vacated mid-game.
+    if (!players.some((p) => !(p.isBot ?? false))) {
+      await ctx.db.patch(room._id, { gameState: "finished" });
+      if (room.telegram) {
+        await ctx.scheduler.runAfter(0, internal.telegram.notify.refreshBoard, {
+          roomId: args.roomId,
+        });
+      }
+      return null;
+    }
+
     const currentPlayerDoc = players[room.currentPlayerIndex];
     if (!currentPlayerDoc || !(currentPlayerDoc.isBot ?? false)) {
       return null; // Not a bot's turn

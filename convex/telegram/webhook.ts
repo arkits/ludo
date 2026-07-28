@@ -6,7 +6,7 @@
  * mutations, with no network and no Convex runtime (see webhook.test.ts).
  */
 
-import type { TelegramApi, MessageTarget } from "./api";
+import type { TelegramApi, MessageTarget, LinkPreviewOptions } from "./api";
 import {
   renderMatchText,
   renderMatchKeyboard,
@@ -84,6 +84,7 @@ export interface UpdateHandlerDeps {
   leaveLobby(roomId: string, userId: number): Promise<LobbyResult>;
   addBot(roomId: string, userId: number): Promise<LobbyResult>;
   startMatch(roomId: string, userId: number): Promise<LobbyResult>;
+  endMatch(roomId: string, userId: number): Promise<LobbyResult>;
   matchView(roomId: string): Promise<MatchView | null>;
   createInlineLobby(
     inlineMessageId: string,
@@ -97,6 +98,15 @@ export interface UpdateHandlerDeps {
 
 /** The id of the single inline result the bot offers. */
 export const INLINE_NEW_GAME = "ludo_new_game";
+
+/**
+ * The artwork shown above an inline game's message. Telegram drops a link
+ * preview unless it is resupplied on every edit, so this travels with the
+ * status board for the life of the game.
+ */
+export function invitePreview(imageUrl: string): LinkPreviewOptions {
+  return { url: imageUrl, prefer_large_media: true, show_above_text: true };
+}
 
 const helpText = (botUsername: string) =>
   [
@@ -180,10 +190,13 @@ async function rerender(
   const view = await deps.matchView(roomId);
   if (!view) return;
 
-  await deps.api.editMessageBody({
+  await deps.api.editMessageText({
     target,
     text: renderMatchText(view),
     replyMarkup: renderMatchKeyboard(view, deps.boardLink),
+    // Only inline games carry the artwork, and only if it is resent each time.
+    linkPreview:
+      target.kind === "inline" ? invitePreview(deps.inviteImageUrl) : undefined,
   });
 }
 
@@ -216,15 +229,17 @@ async function handleInlineQuery(
     cacheTime: 0,
     results: [
       {
-        type: "photo",
+        type: "article",
         id: `${INLINE_NEW_GAME}:${candidateRoomId}`,
-        photo_url: deps.inviteImageUrl,
-        thumbnail_url: deps.inviteImageUrl,
-        photo_width: 640,
-        photo_height: 360,
-        title: "Start a game of Ludo",
+        title: "🎲 Start a game of Ludo",
         description: "Up to 4 players — no need to add the bot to the chat",
-        caption: `🎲 ${who} started a game of Ludo\n\nSetting up…`,
+        thumbnail_url: deps.inviteImageUrl,
+        thumbnail_width: 640,
+        thumbnail_height: 360,
+        input_message_content: {
+          message_text: `🎲 ${who} started a game of Ludo\n\nSetting up…`,
+          link_preview_options: invitePreview(deps.inviteImageUrl),
+        },
         reply_markup: {
           inline_keyboard: [
             [{ text: "🎮 Open board", url: boardUrl(deps.boardLink, candidateRoomId) }],
@@ -369,6 +384,9 @@ async function handleCallbackQuery(
     case "start":
       // Host-only; enforced server-side in match.startMatch, not here.
       result = await deps.startMatch(roomId, userId);
+      break;
+    case "end":
+      result = await deps.endMatch(roomId, userId);
       break;
     default:
       await answer();

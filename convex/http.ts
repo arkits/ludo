@@ -93,6 +93,12 @@ const telegramWebhook = httpAction(async (ctx, request) => {
           telegramUserId: userId,
         }),
 
+      endMatch: (roomId, userId) =>
+        ctx.runMutation(internal.telegram.match.endMatch, {
+          roomId,
+          telegramUserId: userId,
+        }),
+
       matchView: async (roomId) => {
         const snapshot = await ctx.runQuery(internal.telegram.match.matchView, {
           roomId,

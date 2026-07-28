@@ -2,9 +2,10 @@ import { internalAction, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import { createTelegramApi } from "./api";
-import { botToken, boardLink } from "./config";
+import { botToken, boardLink, inviteImageUrl } from "./config";
 import { renderMatchText, renderMatchKeyboard, renderTurnPing } from "./render";
 import { nextIdleAction, IDLE_HANDOFF_MS } from "./idle";
+import { invitePreview } from "./webhook";
 import type { MatchView } from "./render";
 import type { MessageTarget } from "./api";
 
@@ -122,10 +123,13 @@ export const refreshBoard = internalAction({
     }
 
     const api = createTelegramApi(botToken());
-    const edited = await api.editMessageBody({
+    const edited = await api.editMessageText({
       target,
       text,
       replyMarkup: renderMatchKeyboard(view, boardLink()),
+      // Only inline games carry the artwork, and only if it is resent each time.
+      linkPreview:
+        target.kind === "inline" ? invitePreview(inviteImageUrl()) : undefined,
     });
 
     if (edited) {

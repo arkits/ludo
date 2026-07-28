@@ -39,26 +39,42 @@ export type MessageTarget =
   | { kind: "chat"; chatId: number; messageId: number }
   | { kind: "inline"; inlineMessageId: string };
 
-export interface EditMessageBodyArgs {
+/**
+ * Renders an image above the message without the text having to contain a
+ * URL. This is how a plain text message gets artwork - the alternative, a
+ * photo message, would put the body in a caption and render as a thumbnail
+ * grid in the inline picker with the title and description hidden.
+ */
+export interface LinkPreviewOptions {
+  url: string;
+  prefer_large_media?: boolean;
+  show_above_text?: boolean;
+}
+
+export interface EditMessageTextArgs {
   target: MessageTarget;
   text: string;
   replyMarkup?: InlineKeyboard;
+  /** Must be resupplied on every edit or the preview is dropped. */
+  linkPreview?: LinkPreviewOptions;
 }
 
 /**
- * Photo result. Telegram requires JPEG here - a PNG is silently rejected -
- * see public/telegram-invite.jpg.
+ * Article result. Renders in the picker as a list row with title, description
+ * and thumbnail - the layout photo results do not get.
  */
-export interface InlineQueryResultPhoto {
-  type: "photo";
+export interface InlineQueryResultArticle {
+  type: "article";
   id: string;
-  photo_url: string;
-  thumbnail_url: string;
-  photo_width?: number;
-  photo_height?: number;
-  title?: string;
+  title: string;
   description?: string;
-  caption?: string;
+  thumbnail_url?: string;
+  thumbnail_width?: number;
+  thumbnail_height?: number;
+  input_message_content: {
+    message_text: string;
+    link_preview_options?: LinkPreviewOptions;
+  };
   /**
    * Required, even as a placeholder: without an inline keyboard Telegram
    * omits inline_message_id from chosen_inline_result, leaving the posted
@@ -69,7 +85,7 @@ export interface InlineQueryResultPhoto {
 
 export interface AnswerInlineQueryArgs {
   inlineQueryId: string;
-  results: InlineQueryResultPhoto[];
+  results: InlineQueryResultArticle[];
   /** Results are per-user and must never be cached across users. */
   isPersonal?: boolean;
   cacheTime?: number;
@@ -84,11 +100,8 @@ export interface AnswerCallbackQueryArgs {
 export interface TelegramApi {
   /** Returns the sent message id, or null if the send failed. */
   sendMessage(args: SendMessageArgs): Promise<number | null>;
-  /**
-   * Replace a message's visible body, whichever form it takes. Resolves
-   * whether the edit landed; a no-op edit counts as success.
-   */
-  editMessageBody(args: EditMessageBodyArgs): Promise<boolean>;
+  /** Resolves whether the edit landed. A no-op edit counts as success. */
+  editMessageText(args: EditMessageTextArgs): Promise<boolean>;
   answerCallbackQuery(args: AnswerCallbackQueryArgs): Promise<void>;
   answerInlineQuery(args: AnswerInlineQueryArgs): Promise<void>;
 }
@@ -142,24 +155,23 @@ export function createTelegramApi(botToken: string): TelegramApi {
       return result.result.message_id;
     },
 
-    async editMessageBody({ target, text, replyMarkup }) {
-      // A chat message is text; an inline message is a photo, whose body is
-      // its caption. editMessageText against a photo fails outright.
-      const [method, address, body] =
+    async editMessageText({ target, text, replyMarkup, linkPreview }) {
+      const address =
         target.kind === "chat"
-          ? (["editMessageText", { chat_id: target.chatId, message_id: target.messageId }, { text }] as const)
-          : (["editMessageCaption", { inline_message_id: target.inlineMessageId }, { caption: text }] as const);
+          ? { chat_id: target.chatId, message_id: target.messageId }
+          : { inline_message_id: target.inlineMessageId };
 
-      const result = await call(method, {
+      const result = await call("editMessageText", {
         ...address,
-        ...body,
+        text,
+        link_preview_options: linkPreview,
         reply_markup: replyMarkup ? { inline_keyboard: replyMarkup } : undefined,
       });
       if (!result.ok) {
         if (result.description?.includes(NOT_MODIFIED)) {
           return true;
         }
-        console.error(`telegram ${method} failed:`, result.description);
+        console.error("telegram editMessageText failed:", result.description);
         return false;
       }
       return true;

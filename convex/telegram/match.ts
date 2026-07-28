@@ -424,6 +424,45 @@ export const startMatch = internalMutation({
 });
 
 /**
+ * End a match early.
+ *
+ * Anyone seated may do it - a game whose only human seats have been handed to
+ * the AI would otherwise have nobody left who is allowed to stop it, which is
+ * exactly the state that needs ending. Falls back to the host while the game
+ * is still in the lobby and has no other seats.
+ */
+export const endMatch = internalMutation({
+  args: { roomId: v.string(), telegramUserId: v.number() },
+  returns: actionResult,
+  handler: async (ctx, args) => {
+    const match = await loadMatch(ctx, args.roomId);
+    if (!match) return { ok: false, message: "That game no longer exists." };
+
+    const { room, players } = match;
+
+    if (room.gameState === "finished") {
+      return { ok: false, message: "That game has already ended." };
+    }
+
+    const wasSeated = players.some(
+      (p) => p.telegramUserId === args.telegramUserId
+    );
+    if (!wasSeated && players.length > 0) {
+      return { ok: false, message: "Only players in this game can end it." };
+    }
+
+    await ctx.db.patch(room._id, {
+      gameState: "finished",
+      // No winnerId: the board renders this as ended rather than won.
+      hasRolledDice: false,
+      diceValue: 0,
+    });
+
+    return { ok: true, message: "Game ended." };
+  },
+});
+
+/**
  * Hand a stalled seat to the bot AI. Called by the idle escalation once a
  * player has been pinged and still has not moved.
  *

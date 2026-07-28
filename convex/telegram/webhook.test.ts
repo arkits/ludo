@@ -25,9 +25,11 @@ function seat(nickname: string, color: MatchView["seats"][number]["color"]) {
   return { nickname, color, isBot: false, finishedTokens: 0 };
 }
 
+type EditArgs = Parameters<UpdateHandlerDeps['api']['editMessageText']>[0];
 type EditRecord = {
-  target: NonNullable<Parameters<UpdateHandlerDeps['api']['editMessageBody']>[0]>['target'];
+  target: EditArgs['target'];
   text: string;
+  linkPreview: EditArgs['linkPreview'];
 };
 
 function makeDeps(overrides: Partial<UpdateHandlerDeps> = {}) {
@@ -43,8 +45,8 @@ function makeDeps(overrides: Partial<UpdateHandlerDeps> = {}) {
         sent.push({ chatId: args.chatId, text: args.text });
         return 555;
       }),
-      editMessageBody: vi.fn(async (args) => {
-        edited.push({ target: args.target, text: args.text });
+      editMessageText: vi.fn(async (args) => {
+        edited.push({ target: args.target, text: args.text, linkPreview: args.linkPreview });
         return true;
       }),
       answerCallbackQuery: vi.fn(async (args) => {
@@ -67,6 +69,7 @@ function makeDeps(overrides: Partial<UpdateHandlerDeps> = {}) {
     leaveLobby: vi.fn(async () => ({ ok: true, message: "You've left the game." })),
     addBot: vi.fn(async () => ({ ok: true, message: "Bot added 🤖" })),
     startMatch: vi.fn(async () => ({ ok: true, message: "Game on 🎲" })),
+    endMatch: vi.fn(async () => ({ ok: true, message: "Game ended." })),
     matchView: vi.fn(async () => waitingView()),
     createInlineLobby: vi.fn(async () => ({ roomId: "INL456" })),
     inviteImageUrl: "https://example.test/telegram-invite.jpg",
@@ -346,14 +349,66 @@ describe("handleUpdate — inline mode", () => {
     );
   });
 
-  it("posts a JPEG photo, the only format Telegram accepts here", async () => {
+  /*
+   * An article, not a photo: photo results render as a thumbnail grid where
+   * the title and description are never shown. The artwork comes from a large
+   * link preview on the message instead, which keeps the body plain text and
+   * therefore editable with editMessageText.
+   */
+  it("offers an article so the picker shows title and description", async () => {
     const { deps, inlineResults } = makeDeps();
 
     await handleUpdate(inlineQuery, deps);
 
-    expect(inlineResults[0].type).toBe("photo");
-    expect(inlineResults[0].photo_url).toBe("https://example.test/telegram-invite.jpg");
-    expect(inlineResults[0].caption).toContain("Ada");
+    expect(inlineResults[0].type).toBe("article");
+    expect(inlineResults[0].title).toContain("Ludo");
+    expect(inlineResults[0].description).toBeTruthy();
+    expect(inlineResults[0].thumbnail_url).toBe("https://example.test/telegram-invite.jpg");
+  });
+
+  it("carries the artwork as a large preview above the text", async () => {
+    const { deps, inlineResults } = makeDeps();
+
+    await handleUpdate(inlineQuery, deps);
+
+    expect(inlineResults[0].input_message_content.link_preview_options).toEqual({
+      url: "https://example.test/telegram-invite.jpg",
+      prefer_large_media: true,
+      show_above_text: true,
+    });
+    expect(inlineResults[0].input_message_content.message_text).toContain("Ada");
+  });
+
+  // Telegram drops a link preview on edit unless it is resupplied, which would
+  // make the artwork vanish the first time the roster changed.
+  it("resupplies the preview when re-rendering an inline game", async () => {
+    const { deps, edited } = makeDeps();
+
+    await handleUpdate(
+      {
+        callback_query: {
+          id: "cbq-11",
+          from: { id: 99, first_name: "Sam" },
+          data: "join:INL456",
+          inline_message_id: "inline-abc",
+        },
+      },
+      deps
+    );
+
+    expect(edited[0].linkPreview).toEqual({
+      url: "https://example.test/telegram-invite.jpg",
+      prefer_large_media: true,
+      show_above_text: true,
+    });
+  });
+
+  it("does not attach a preview when re-rendering a chat game", async () => {
+    const { deps, edited } = makeDeps();
+
+    await handleUpdate(callback("join:ABC123"), deps);
+
+    expect(edited[0].linkPreview).toBeUndefined();
   });
 
   it("never lets a result be cached or shared between users", async () => {

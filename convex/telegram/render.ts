@@ -81,10 +81,18 @@ export function renderMatchText(match: MatchView): string {
   }
 
   if (match.gameState === "finished") {
-    lines.push(`🏆 ${match.winnerNickname ?? "Nobody"} wins!`);
+    // A finished game with no winner was ended or abandoned rather than won,
+    // so it must not claim "Nobody wins!" as though it played to a result.
+    lines.push(
+      match.winnerNickname ? `🏆 ${match.winnerNickname} wins!` : "🎲 Game over"
+    );
     lines.push("");
     for (const seat of match.seats) {
       lines.push(seatLine(seat, "", true));
+    }
+    if (!match.winnerNickname) {
+      lines.push("");
+      lines.push("Ended before anyone got home.");
     }
     return lines.join("\n");
   }
@@ -119,7 +127,7 @@ export function renderMatchKeyboard(match: MatchView, link: BoardLink): InlineKe
       rows.push(secondRow);
     }
 
-    rows.push([open]);
+    rows.push([open, { text: "✕ Cancel", callback_data: `end:${match.roomId}` }]);
     return rows;
   }
 
@@ -127,7 +135,9 @@ export function renderMatchKeyboard(match: MatchView, link: BoardLink): InlineKe
     return [[{ text: "🎲 New game", callback_data: "new:" }]];
   }
 
-  return [[open]];
+  // A game in play needs a way out: without this an abandoned match sits in
+  // the chat forever with no control other than waiting for someone to win.
+  return [[open, { text: "🏳 End game", callback_data: `end:${match.roomId}` }]];
 }
 
 /**

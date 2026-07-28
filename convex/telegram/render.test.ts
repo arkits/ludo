@@ -109,6 +109,18 @@ describe("renderMatchText — finished", () => {
 
     expect(text).not.toContain("← turn");
   });
+
+  // A game that was ended or abandoned has no winner, and must not claim
+  // "Nobody wins!" as though it played to a result.
+  it("reports an ended game without inventing a result", () => {
+    const text = renderMatchText(
+      view({ gameState: "finished", seats: [seat()], winnerNickname: null })
+    );
+
+    expect(text).toContain("Game over");
+    expect(text).not.toContain("wins!");
+    expect(text).toContain("Ended before anyone got home.");
+  });
 });
 
 describe("renderMatchKeyboard", () => {
@@ -147,12 +159,30 @@ describe("renderMatchKeyboard", () => {
     expect(rows.flat().map((b) => b.text)).not.toContain("+ Bot");
   });
 
-  it("reduces to just the board link once play starts", () => {
+  it("offers the board link once play starts", () => {
     const rows = renderMatchKeyboard(view({ gameState: "playing" }), LINK);
 
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toHaveLength(1);
-    expect(rows[0][0].url).toContain("startapp=ABC123");
+    expect(rows.flat().some((b) => b.url?.includes("startapp=ABC123"))).toBe(true);
+  });
+
+  // Without this an abandoned match sits in the chat forever, with no control
+  // other than waiting for someone to win.
+  it("always offers a way out of a game in play", () => {
+    const rows = renderMatchKeyboard(view({ gameState: "playing" }), LINK);
+
+    expect(rows.flat().map((b) => b.callback_data)).toContain("end:ABC123");
+  });
+
+  it("offers a way to cancel a lobby that never started", () => {
+    const rows = renderMatchKeyboard(view({ seats: [seat()] }), LINK);
+
+    expect(rows.flat().map((b) => b.callback_data)).toContain("end:ABC123");
+  });
+
+  it("drops the end control once the game is over", () => {
+    const rows = renderMatchKeyboard(view({ gameState: "finished" }), LINK);
+
+    expect(rows.flat().map((b) => b.callback_data)).not.toContain("end:ABC123");
   });
 
   it("offers a new game when finished", () => {
