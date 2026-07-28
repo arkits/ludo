@@ -234,8 +234,8 @@ async function handleInlineQuery(
         title: "🎲 Start a game of Ludo",
         description: "Up to 4 players — no need to add the bot to the chat",
         thumbnail_url: deps.inviteImageUrl,
-        thumbnail_width: 640,
-        thumbnail_height: 360,
+        thumbnail_width: 1280,
+        thumbnail_height: 720,
         input_message_content: {
           message_text: `🎲 ${who} started a game of Ludo\n\nSetting up…`,
           link_preview_options: invitePreview(deps.inviteImageUrl),

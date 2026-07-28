@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "generate-icons": "node scripts/generate-icons.js"
+    "generate-icons": "node scripts/generate-icons.js",
+    "generate-telegram-invite": "node scripts/generate-telegram-invite.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
