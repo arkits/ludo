@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { PlayerColor } from '../../types/game';
+import { BOARD_HALF } from './worldCoords';
 
 // Corner directions (world x/z sign) per player color, matching board quadrants.
 const CORNER: Record<PlayerColor, [number, number]> = {
@@ -11,17 +12,114 @@ const CORNER: Record<PlayerColor, [number, number]> = {
   yellow: [1, 1],
 };
 
+const QUAD: Array<[number, number]> = [
+  [-1, -1],
+  [1, -1],
+  [1, 1],
+  [-1, 1],
+];
+
+// The printed playing field — what has to stay on screen. The wooden frame
+// around it (half-extent + 0.8) is free to run off the edges.
+const FIELD_HALF = BOARD_HALF;
+const FIELD_Y = 0.13;
+
+const MIN_DIST = 9;
+const MAX_DIST = 80;
+
+function positionFor(out: THREE.Vector3, dist: number, az: number, po: number, cz: number) {
+  out.set(
+    Math.sin(az) * Math.sin(po) * dist,
+    Math.cos(po) * dist,
+    Math.cos(az) * Math.sin(po) * dist + cz
+  );
+}
+
+// True when the whole playing field projects inside the viewport.
+function fieldVisible(cam: THREE.PerspectiveCamera, ndc: THREE.Vector3[]): boolean {
+  for (let i = 0; i < 4; i++) {
+    const p = ndc[i].set(QUAD[i][0] * FIELD_HALF, FIELD_Y, QUAD[i][1] * FIELD_HALF);
+    p.applyMatrix4(cam.matrixWorldInverse);
+    // A corner behind the camera cannot be on screen.
+    if (p.z > -0.05) return false;
+    p.applyMatrix4(cam.projectionMatrix);
+    if (Math.abs(p.x) > 1 || Math.abs(p.y) > 1) return false;
+  }
+  return true;
+}
+
 interface Props {
   activeCorner: PlayerColor | null;
   reducedMotion: boolean;
+  /** Width in CSS px of UI covering the stage's left edge; the board is
+   *  nudged right by half of it so it sits centred in what's left. */
+  leftInset: number;
 }
 
-export default function CameraRig({ activeCorner, reducedMotion }: Props) {
+export default function CameraRig({ activeCorner, reducedMotion, leftInset }: Props) {
   const { camera, size, gl } = useThree();
   const drag = useRef({ active: false, x: 0, y: 0, az: 0, po: 0 });
   const azimuth = useRef(0);
-  const polar = useRef(0.62); // radians from vertical
+  const polar = useRef(0.52); // radians from vertical
   const t = useRef(0);
+
+  const probe = useMemo(() => new THREE.PerspectiveCamera(), []);
+  const ndc = useMemo(() => [0, 1, 2, 3].map(() => new THREE.Vector3()), []);
+  const target = useMemo(() => new THREE.Vector3(), []);
+  const fit = useRef({ key: '', dist: MAX_DIST, pan: 0 });
+  const placed = useRef(false);
+
+  // Pixel-space pan: slide the frustum window left by `pan` px, which puts the
+  // board that far right on screen. The frame keeps its full size, so this
+  // shifts without zooming or distorting — a wider virtual frame would scale
+  // the board up and eat the fit found below.
+  const applyPan = (cam: THREE.PerspectiveCamera, pan: number) => {
+    cam.setViewOffset(size.width, size.height, -pan, 0, size.width, size.height);
+    cam.updateProjectionMatrix();
+  };
+
+  // How the board is framed: the closest the camera can sit with the whole
+  // playing field on screen, plus how far right it can then be nudged out
+  // from under the sidebar for free. Both are monotonic — more distance and
+  // less pan each help — so short bisections find the bounds. Panning past
+  // the slack would only shrink the board, so it is capped there. Cached
+  // because it only moves when the viewport or the angles do.
+  const framing = (az: number, po: number, cz: number) => {
+    const key = `${size.width}x${size.height}|${leftInset}|${az.toFixed(2)}|${po.toFixed(2)}|${cz}`;
+    if (fit.current.key === key) return fit.current;
+
+    if (camera instanceof THREE.PerspectiveCamera) probe.copy(camera);
+    const place = (dist: number) => {
+      positionFor(probe.position, dist, az, po, cz);
+      probe.lookAt(0, 0, 0);
+      probe.updateMatrixWorld();
+      probe.matrixWorldInverse.copy(probe.matrixWorld).invert();
+    };
+
+    applyPan(probe, 0);
+    let lo = MIN_DIST;
+    let hi = MAX_DIST;
+    for (let i = 0; i < 12; i++) {
+      const mid = (lo + hi) / 2;
+      place(mid);
+      if (fieldVisible(probe, ndc)) hi = mid;
+      else lo = mid;
+    }
+    const dist = THREE.MathUtils.clamp(hi, MIN_DIST, MAX_DIST);
+
+    place(dist);
+    let panLo = 0;
+    let panHi = leftInset / 2;
+    for (let i = 0; i < 10 && panHi > panLo; i++) {
+      const mid = (panLo + panHi) / 2;
+      applyPan(probe, mid);
+      if (fieldVisible(probe, ndc)) panLo = mid;
+      else panHi = mid;
+    }
+
+    fit.current = { key, dist, pan: panLo };
+    return fit.current;
+  };
 
   useEffect(() => {
     const el = gl.domElement;
@@ -63,37 +161,23 @@ export default function CameraRig({ activeCorner, reducedMotion }: Props) {
 
   useFrame((_, dt) => {
     t.current += dt;
-    // Fit board: pull back further on narrow screens.
-    const aspect = size.width / size.height;
-    // Fit the board (half-extent ~8.3 incl. frame) in the vertical fov,
-    // which is the constraint on landscape screens; widen for portrait.
-    const fovRad = (36 * Math.PI) / 180;
-    const fit = 8.6 / Math.tan(fovRad / 2) / 2; // ≈ 13.2 at target, doubled margin below
-    const dist = aspect > 1 ? fit * 1.95 : (fit * 1.95) / Math.min(aspect * 1.15, 1);
+
     const idle =
       reducedMotion || drag.current.active ? 0 : Math.sin(t.current * 0.25) * 0.045;
     // Nudge toward active player's corner.
     const corner = activeCorner ? CORNER[activeCorner] : [0, 0];
     const targetAz = azimuth.current + idle + corner[0] * 0.1;
     const po = polar.current;
-    const target = new THREE.Vector3(
-      Math.sin(targetAz) * Math.sin(po) * dist,
-      Math.cos(po) * dist,
-      Math.cos(targetAz) * Math.sin(po) * dist + corner[1] * 0.6
-    );
-    camera.position.lerp(target, reducedMotion ? 1 : Math.min(1, dt * 2.5));
-    camera.lookAt(0, 0, 0);
+    const cz = corner[1] * 0.6;
 
-    // Pixel-space pan: shift the rendered frame up so the board sits higher
-    // in the viewport, clear of the floating controls bar docked at the
-    // bottom. Unlike nudging the lookAt target, this shift is exact in
-    // screen pixels regardless of camera distance or aspect ratio.
-    if (camera instanceof THREE.PerspectiveCamera) {
-      const shiftPx = Math.round(size.height * 0.1);
-      const fullHeight = size.height + shiftPx;
-      camera.setViewOffset(size.width, fullHeight, 0, shiftPx, size.width, size.height);
-      camera.updateProjectionMatrix();
-    }
+    const { dist, pan } = framing(targetAz, po, cz);
+    if (camera instanceof THREE.PerspectiveCamera) applyPan(camera, pan);
+    positionFor(target, dist, targetAz, po, cz);
+    // Snap on the first frame so the board opens already framed, then ease.
+    const ease = reducedMotion || !placed.current ? 1 : Math.min(1, dt * 2.5);
+    placed.current = true;
+    camera.position.lerp(target, ease);
+    camera.lookAt(0, 0, 0);
   });
 
   return null;

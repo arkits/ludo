@@ -1,5 +1,6 @@
 import { useGame } from './hooks/useGame';
 import { useOpponentRolling } from './hooks/useOpponentRolling';
+import { useSidebarInset } from './hooks/useSidebarInset';
 import Lobby from './components/Lobby';
 import BoardScene from './components/three/BoardScene';
 import PlayerPanel from './components/PlayerPanel';
@@ -17,6 +18,7 @@ function App() {
     state.room?.hasRolledDice ?? false,
     state.room?.isPlayerTurn ?? false
   );
+  const sidebarInset = useSidebarInset();
 
   const handleTokenClick = (playerId: string, tokenId: number) => {
     if (playerId === state.currentPlayerId && state.room?.isPlayerTurn) {
@@ -86,7 +88,11 @@ function App() {
         </div>
       )}
 
-      <div className="game-container">
+      <div
+        className={`game-container${
+          state.room.gameState === 'playing' ? ' game-container-playing' : ''
+        }`}
+      >
         {state.room.gameState !== 'waiting' && (
           <div className="game-header">
             <div className="brand-lockup">
@@ -184,6 +190,7 @@ function App() {
                   diceValue={state.room.diceValue}
                   isRollingDice={state.isRollingDice || opponentRolling}
                   activeCorner={state.room.currentPlayer?.color || null}
+                  leftInset={sidebarInset}
                 />
               </div>
               <GameControls

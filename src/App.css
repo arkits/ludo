@@ -582,3 +582,60 @@
   .turn-marquee-label { display: none; }
   .game-sidebar { padding: 8px; }
 }
+
+/* ── Playing screen: the board is the page ─────────────────────────────
+   The stage runs edge to edge of the window and every other panel — header,
+   players, move history, controls — floats on top of it. */
+@media (min-width: 1025px) {
+  .game-container-playing {
+    position: relative;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .game-container-playing .game-header {
+    position: absolute;
+    top: 12px;
+    left: 14px;
+    right: 14px;
+    z-index: 40;
+    margin-bottom: 0;
+    background: linear-gradient(180deg, rgba(39, 24, 15, .55), rgba(25, 14, 9, .62));
+    backdrop-filter: blur(14px);
+  }
+
+  .game-container-playing .game-play {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    height: 100dvh;
+  }
+
+  .game-container-playing .game-sidebar {
+    position: absolute;
+    top: 86px;
+    left: 14px;
+    z-index: 30;
+    width: clamp(230px, 18vw, 300px);
+    max-height: calc(100dvh - 190px);
+    overflow-y: auto;
+    background: linear-gradient(145deg, rgba(68, 43, 27, .82), rgba(35, 20, 13, .86));
+    backdrop-filter: blur(14px);
+  }
+
+  .game-container-playing .game-main {
+    padding: 0;
+    overflow: visible;
+  }
+
+  .game-container-playing .board-stage {
+    border-radius: 0;
+  }
+
+  /* Clear the floating header. */
+  .game-container-playing .turn-marquee {
+    top: 86px;
+    right: 14px;
+  }
+}

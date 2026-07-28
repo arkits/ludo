@@ -24,6 +24,8 @@ export interface BoardSceneProps {
   diceValue: number;
   isRollingDice: boolean;
   activeCorner: PlayerColor | null;
+  /** CSS px of UI overlaying the stage's left edge (the floating sidebar). */
+  leftInset?: number;
 }
 
 function webglAvailable(): boolean {
@@ -85,7 +87,11 @@ export default function BoardScene(props: BoardSceneProps) {
       )}
       <Dice3D value={props.diceValue} isRolling={props.isRollingDice} reducedMotion={reducedMotion} />
       <ContactShadows position={[0, -0.64, 0]} opacity={0.45} scale={24} blur={2.2} far={4} />
-      <CameraRig activeCorner={props.activeCorner} reducedMotion={reducedMotion} />
+      <CameraRig
+        activeCorner={props.activeCorner}
+        reducedMotion={reducedMotion}
+        leftInset={props.leftInset ?? 0}
+      />
     </Canvas>
   );
 }
