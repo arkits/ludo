@@ -26,7 +26,7 @@ function seat(nickname: string, color: MatchView["seats"][number]["color"]) {
 }
 
 type EditRecord = {
-  target: NonNullable<Parameters<UpdateHandlerDeps['api']['editMessageText']>[0]>['target'];
+  target: NonNullable<Parameters<UpdateHandlerDeps['api']['editMessageBody']>[0]>['target'];
   text: string;
 };
 
@@ -35,6 +35,7 @@ function makeDeps(overrides: Partial<UpdateHandlerDeps> = {}) {
   const edited: EditRecord[] = [];
   const answered: Array<{ callbackQueryId: string; text?: string }> = [];
   const inlineAnswers: Array<{ inlineQueryId: string; ids: string[]; isPersonal?: boolean; cacheTime?: number }> = [];
+  const inlineResults: Array<Parameters<UpdateHandlerDeps['api']['answerInlineQuery']>[0]['results'][number]> = [];
 
   const deps: UpdateHandlerDeps = {
     api: {
@@ -42,7 +43,7 @@ function makeDeps(overrides: Partial<UpdateHandlerDeps> = {}) {
         sent.push({ chatId: args.chatId, text: args.text });
         return 555;
       }),
-      editMessageText: vi.fn(async (args) => {
+      editMessageBody: vi.fn(async (args) => {
         edited.push({ target: args.target, text: args.text });
         return true;
       }),
@@ -56,6 +57,7 @@ function makeDeps(overrides: Partial<UpdateHandlerDeps> = {}) {
           isPersonal: args.isPersonal,
           cacheTime: args.cacheTime,
         });
+        inlineResults.push(...args.results);
       }),
     },
     boardLink: BOARD_LINK,
@@ -67,10 +69,11 @@ function makeDeps(overrides: Partial<UpdateHandlerDeps> = {}) {
     startMatch: vi.fn(async () => ({ ok: true, message: "Game on 🎲" })),
     matchView: vi.fn(async () => waitingView()),
     createInlineLobby: vi.fn(async () => ({ roomId: "INL456" })),
+    inviteImageUrl: "https://example.test/telegram-invite.jpg",
     ...overrides,
   };
 
-  return { deps, sent, edited, answered, inlineAnswers };
+  return { deps, sent, edited, answered, inlineAnswers, inlineResults };
 }
 
 function groupMessage(text: string, chatId = -100) {
@@ -304,14 +307,53 @@ describe("handleUpdate — inline mode", () => {
     inline_query: { id: "iq-1", from: { id: 7, first_name: "Ada" }, query: "" },
   };
 
-  it("offers a single start-a-game result", async () => {
+  it("offers a single start-a-game result carrying a room id", async () => {
     const { deps, inlineAnswers } = makeDeps();
 
     await handleUpdate(inlineQuery, deps);
 
     expect(inlineAnswers).toHaveLength(1);
     expect(inlineAnswers[0].inlineQueryId).toBe("iq-1");
-    expect(inlineAnswers[0].ids).toEqual([INLINE_NEW_GAME]);
+    expect(inlineAnswers[0].ids).toHaveLength(1);
+    expect(inlineAnswers[0].ids[0]).toMatch(
+      new RegExp(`^${INLINE_NEW_GAME}:[A-Z0-9]+$`)
+    );
+  });
+
+  /*
+   * Regression: the result originally had no reply_markup. Telegram only
+   * reports inline_message_id when the posted message carries an inline
+   * keyboard, so without one every game stranded on its placeholder caption.
+   */
+  it("attaches a keyboard, without which inline_message_id never arrives", async () => {
+    const { deps, inlineResults } = makeDeps();
+
+    await handleUpdate(inlineQuery, deps);
+
+    const markup = inlineResults[0].reply_markup;
+    expect(markup).toBeDefined();
+    expect(markup!.inline_keyboard.length).toBeGreaterThan(0);
+  });
+
+  it("points that keyboard at the same room id the result carries", async () => {
+    const { deps, inlineResults } = makeDeps();
+
+    await handleUpdate(inlineQuery, deps);
+
+    const roomId = inlineResults[0].id.split(":")[1];
+    expect(inlineResults[0].reply_markup!.inline_keyboard[0][0].url).toBe(
+      `https://t.me/LudoTestBot/play?startapp=${roomId}`
+    );
+  });
+
+  it("posts a JPEG photo, the only format Telegram accepts here", async () => {
+    const { deps, inlineResults } = makeDeps();
+
+    await handleUpdate(inlineQuery, deps);
+
+    expect(inlineResults[0].type).toBe("photo");
+    expect(inlineResults[0].photo_url).toBe("https://example.test/telegram-invite.jpg");
+    expect(inlineResults[0].caption).toContain("Ada");
   });
 
   it("never lets a result be cached or shared between users", async () => {
@@ -329,7 +371,7 @@ describe("handleUpdate — inline mode", () => {
     await handleUpdate(
       {
         chosen_inline_result: {
-          result_id: INLINE_NEW_GAME,
+          result_id: `${INLINE_NEW_GAME}:PS6N8C`,
           from: { id: 7, first_name: "Ada", last_name: "Lovelace" },
           inline_message_id: "inline-abc",
           query: "",
@@ -338,7 +380,37 @@ describe("handleUpdate — inline mode", () => {
       deps
     );
 
-    expect(deps.createInlineLobby).toHaveBeenCalledWith("inline-abc", 7, "Ada Lovelace");
+    // The room id from the result is passed through, so the button already in
+    // the posted message points at the game that gets created.
+    expect(deps.createInlineLobby).toHaveBeenCalledWith(
+      "inline-abc",
+      7,
+      "Ada Lovelace",
+      "PS6N8C"
+    );
+  });
+
+  it("still creates a game when the result carries no room id", async () => {
+    const { deps } = makeDeps();
+
+    await handleUpdate(
+      {
+        chosen_inline_result: {
+          result_id: INLINE_NEW_GAME,
+          from: { id: 7, first_name: "Ada" },
+          inline_message_id: "inline-abc",
+          query: "",
+        },
+      },
+      deps
+    );
+
+    expect(deps.createInlineLobby).toHaveBeenCalledWith(
+      "inline-abc",
+      7,
+      "Ada",
+      undefined
+    );
   });
 
   it("replaces the placeholder message with the real lobby", async () => {

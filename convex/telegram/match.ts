@@ -196,10 +196,25 @@ export const createInlineLobby = internalMutation({
     inlineMessageId: v.string(),
     telegramUserId: v.number(),
     nickname: v.string(),
+    /**
+     * The id already baked into the posted message's button. Honoured when
+     * free so the button is correct from the first frame; a collision falls
+     * back to a fresh id, and the re-render fixes the keyboard.
+     */
+    preferredRoomId: v.optional(v.string()),
   },
   returns: v.object({ roomId: v.string() }),
   handler: async (ctx, args) => {
-    const roomId = await allocateRoomId(ctx);
+    const preferred = args.preferredRoomId;
+    const preferredTaken = preferred
+      ? await ctx.db
+          .query("rooms")
+          .withIndex("by_roomId", (q) => q.eq("roomId", preferred))
+          .first()
+      : null;
+
+    const roomId =
+      preferred && !preferredTaken ? preferred : await allocateRoomId(ctx);
 
     await ctx.db.insert("rooms", {
       roomId,

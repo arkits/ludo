@@ -122,7 +122,7 @@ export const refreshBoard = internalAction({
     }
 
     const api = createTelegramApi(botToken());
-    const edited = await api.editMessageText({
+    const edited = await api.editMessageBody({
       target,
       text,
       replyMarkup: renderMatchKeyboard(view, boardLink()),

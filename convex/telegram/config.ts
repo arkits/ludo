@@ -27,6 +27,24 @@ export function boardLink(): BoardLink {
   };
 }
 
+/**
+ * Where the front end is served. Convex has no way to discover this on its
+ * own - the deployment knows the bot and the Mini App short name, but nothing
+ * about the site hosting them - so it defaults to this project's production
+ * domain and can be overridden per deployment with TELEGRAM_SITE_URL.
+ */
+const DEFAULT_SITE_URL = "https://ludo.archit.xyz";
+
+/**
+ * The JPEG shown on the inline invite. Telegram fetches this URL server-side,
+ * so it must be publicly reachable, absolute, and actually JPEG - a PNG is
+ * rejected. Served from public/telegram-invite.jpg.
+ */
+export function inviteImageUrl(): string {
+  const base = (process.env.TELEGRAM_SITE_URL || DEFAULT_SITE_URL).replace(/\/+$/, "");
+  return `${base}/telegram-invite.jpg`;
+}
+
 export function isConfigured(): boolean {
   const link = boardLink();
   return botToken() !== "" && link.botUsername !== "" && link.appShortName !== "";

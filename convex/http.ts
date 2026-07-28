@@ -2,7 +2,13 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { createTelegramApi } from "./telegram/api";
-import { botToken, boardLink, webhookSecret, isConfigured } from "./telegram/config";
+import {
+  botToken,
+  boardLink,
+  webhookSecret,
+  inviteImageUrl,
+  isConfigured,
+} from "./telegram/config";
 import { constantTimeEquals } from "./telegram/verify";
 import { handleUpdate, type TelegramUpdate } from "./telegram/webhook";
 import type { MatchView } from "./telegram/render";
@@ -94,12 +100,15 @@ const telegramWebhook = httpAction(async (ctx, request) => {
         return (snapshot?.view ?? null) as MatchView | null;
       },
 
-      createInlineLobby: (inlineMessageId, userId, nickname) =>
+      createInlineLobby: (inlineMessageId, userId, nickname, preferredRoomId) =>
         ctx.runMutation(internal.telegram.match.createInlineLobby, {
           inlineMessageId,
           telegramUserId: userId,
           nickname,
+          preferredRoomId,
         }),
+
+      inviteImageUrl: inviteImageUrl(),
     });
   } catch (error) {
     // Never return non-200 for a handler bug: Telegram would redeliver the

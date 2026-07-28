@@ -11,9 +11,11 @@ import {
   renderMatchText,
   renderMatchKeyboard,
   parseCallbackData,
+  boardUrl,
   type BoardLink,
   type MatchView,
 } from "./render";
+import { generateRoomId } from "../roomId";
 
 export interface TelegramChat {
   id: number;
@@ -86,8 +88,11 @@ export interface UpdateHandlerDeps {
   createInlineLobby(
     inlineMessageId: string,
     userId: number,
-    nickname: string
+    nickname: string,
+    preferredRoomId?: string
   ): Promise<{ roomId: string }>;
+  /** Publicly reachable JPEG shown on the inline invite. */
+  inviteImageUrl: string;
 }
 
 /** The id of the single inline result the bot offers. */
@@ -175,7 +180,7 @@ async function rerender(
   const view = await deps.matchView(roomId);
   if (!view) return;
 
-  await deps.api.editMessageText({
+  await deps.api.editMessageBody({
     target,
     text: renderMatchText(view),
     replyMarkup: renderMatchKeyboard(view, deps.boardLink),
@@ -185,15 +190,24 @@ async function rerender(
 /**
  * Offer a single "start a game" result.
  *
- * The posted message is a placeholder: the real roster and buttons need a
- * roomId, which cannot exist until the user actually picks the result. The
- * chosen_inline_result handler creates the game and edits this text away
- * immediately.
+ * Two things here are load-bearing rather than decorative:
+ *
+ * 1. The result MUST carry a reply_markup. Telegram only reports
+ *    inline_message_id in chosen_inline_result when the posted message has an
+ *    inline keyboard, and without that id the message can never be edited -
+ *    the game would be stranded on its placeholder caption forever.
+ * 2. The roomId is chosen here rather than when the result is picked, so the
+ *    button points at the right game from the first frame. The game is created
+ *    under this id if it is still free; chosen_inline_result re-renders the
+ *    keyboard either way, so a collision self-corrects.
  */
 async function handleInlineQuery(
   deps: UpdateHandlerDeps,
   query: TelegramInlineQuery
 ): Promise<void> {
+  const candidateRoomId = generateRoomId();
+  const who = displayNameFrom(query.from);
+
   await deps.api.answerInlineQuery({
     inlineQueryId: query.id,
     // Per-user and uncached: the result creates a game keyed to whoever picks
@@ -202,12 +216,19 @@ async function handleInlineQuery(
     cacheTime: 0,
     results: [
       {
-        type: "article",
-        id: INLINE_NEW_GAME,
-        title: "🎲 Start a game of Ludo",
-        description: "Up to 4 players — no need to add the bot to the group",
-        input_message_content: {
-          message_text: `🎲 ${displayNameFrom(query.from)} started a game of Ludo\n\nSetting up…`,
+        type: "photo",
+        id: `${INLINE_NEW_GAME}:${candidateRoomId}`,
+        photo_url: deps.inviteImageUrl,
+        thumbnail_url: deps.inviteImageUrl,
+        photo_width: 640,
+        photo_height: 360,
+        title: "Start a game of Ludo",
+        description: "Up to 4 players — no need to add the bot to the chat",
+        caption: `🎲 ${who} started a game of Ludo\n\nSetting up…`,
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🎮 Open board", url: boardUrl(deps.boardLink, candidateRoomId) }],
+          ],
         },
       },
     ],
@@ -223,13 +244,16 @@ async function handleChosenInlineResult(
   deps: UpdateHandlerDeps,
   chosen: TelegramChosenInlineResult
 ): Promise<void> {
-  if (chosen.result_id !== INLINE_NEW_GAME) return;
+  const [kind, preferredRoomId] = chosen.result_id.split(":");
+  if (kind !== INLINE_NEW_GAME) return;
 
-  // Absent when inline feedback is disabled in BotFather, in which case the
-  // message can never be edited and the game would be unreachable.
+  // Absent when the result carried no inline keyboard, or when inline feedback
+  // is disabled in BotFather. Either way the message can never be edited, so
+  // the game would be unreachable - better to create nothing.
   if (!chosen.inline_message_id) {
     console.error(
-      "chosen_inline_result had no inline_message_id; enable /setinlinefeedback"
+      "chosen_inline_result had no inline_message_id: the result needs a " +
+        "reply_markup, and /setinlinefeedback must be enabled"
     );
     return;
   }
@@ -237,7 +261,8 @@ async function handleChosenInlineResult(
   const { roomId } = await deps.createInlineLobby(
     chosen.inline_message_id,
     chosen.from.id,
-    displayNameFrom(chosen.from)
+    displayNameFrom(chosen.from),
+    preferredRoomId || undefined
   );
 
   await rerender(deps, roomId, {

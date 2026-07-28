@@ -27,33 +27,49 @@ export interface SendMessageArgs {
 }
 
 /**
- * Which message to edit. A bot-posted message is addressed by chat + message
- * id; a message posted through inline mode only ever has an inline id, and
- * the bot never learns which chat it landed in.
+ * Which message to edit.
+ *
+ * A bot-posted message is addressed by chat + message id and carries plain
+ * text. A message posted through inline mode only ever has an inline id - the
+ * bot never learns which chat it landed in - and is always a photo, so its
+ * body lives in a caption. That difference decides which Bot API method
+ * applies, which is why editMessageBody dispatches on `kind`.
  */
 export type MessageTarget =
   | { kind: "chat"; chatId: number; messageId: number }
   | { kind: "inline"; inlineMessageId: string };
 
-export interface EditMessageTextArgs {
+export interface EditMessageBodyArgs {
   target: MessageTarget;
   text: string;
   replyMarkup?: InlineKeyboard;
 }
 
-export interface InlineQueryResultArticle {
-  type: "article";
+/**
+ * Photo result. Telegram requires JPEG here - a PNG is silently rejected -
+ * see public/telegram-invite.jpg.
+ */
+export interface InlineQueryResultPhoto {
+  type: "photo";
   id: string;
-  title: string;
+  photo_url: string;
+  thumbnail_url: string;
+  photo_width?: number;
+  photo_height?: number;
+  title?: string;
   description?: string;
-  thumbnail_url?: string;
-  input_message_content: { message_text: string };
+  caption?: string;
+  /**
+   * Required, even as a placeholder: without an inline keyboard Telegram
+   * omits inline_message_id from chosen_inline_result, leaving the posted
+   * message impossible to edit afterwards.
+   */
   reply_markup?: { inline_keyboard: InlineKeyboard };
 }
 
 export interface AnswerInlineQueryArgs {
   inlineQueryId: string;
-  results: InlineQueryResultArticle[];
+  results: InlineQueryResultPhoto[];
   /** Results are per-user and must never be cached across users. */
   isPersonal?: boolean;
   cacheTime?: number;
@@ -68,8 +84,11 @@ export interface AnswerCallbackQueryArgs {
 export interface TelegramApi {
   /** Returns the sent message id, or null if the send failed. */
   sendMessage(args: SendMessageArgs): Promise<number | null>;
-  /** Resolves whether the edit landed. A no-op edit counts as success. */
-  editMessageText(args: EditMessageTextArgs): Promise<boolean>;
+  /**
+   * Replace a message's visible body, whichever form it takes. Resolves
+   * whether the edit landed; a no-op edit counts as success.
+   */
+  editMessageBody(args: EditMessageBodyArgs): Promise<boolean>;
   answerCallbackQuery(args: AnswerCallbackQueryArgs): Promise<void>;
   answerInlineQuery(args: AnswerInlineQueryArgs): Promise<void>;
 }
@@ -123,22 +142,24 @@ export function createTelegramApi(botToken: string): TelegramApi {
       return result.result.message_id;
     },
 
-    async editMessageText({ target, text, replyMarkup }) {
-      const address =
+    async editMessageBody({ target, text, replyMarkup }) {
+      // A chat message is text; an inline message is a photo, whose body is
+      // its caption. editMessageText against a photo fails outright.
+      const [method, address, body] =
         target.kind === "chat"
-          ? { chat_id: target.chatId, message_id: target.messageId }
-          : { inline_message_id: target.inlineMessageId };
+          ? (["editMessageText", { chat_id: target.chatId, message_id: target.messageId }, { text }] as const)
+          : (["editMessageCaption", { inline_message_id: target.inlineMessageId }, { caption: text }] as const);
 
-      const result = await call("editMessageText", {
+      const result = await call(method, {
         ...address,
-        text,
+        ...body,
         reply_markup: replyMarkup ? { inline_keyboard: replyMarkup } : undefined,
       });
       if (!result.ok) {
         if (result.description?.includes(NOT_MODIFIED)) {
           return true;
         }
-        console.error("telegram editMessageText failed:", result.description);
+        console.error(`telegram ${method} failed:`, result.description);
         return false;
       }
       return true;
